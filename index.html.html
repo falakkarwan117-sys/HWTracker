@@ -1,0 +1,1934 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#07080b">
+<title>HW Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg-0:#07080b;--bg-1:#0d0f14;--bg-2:#12151c;--bg-3:#191d26;--bg-4:#232834;
+  --surface-card:rgba(255,255,255,0.03);--surface-elev:rgba(255,255,255,0.06);
+  --ink-0:#fff;--ink-1:#e8eaed;--ink-2:#9ba1ad;--ink-3:#5a5f6b;--ink-4:#35393f;
+  --orange:#ea5c1f;--orange-2:#ff7a3d;--orange-soft:rgba(234,92,31,0.14);--orange-glow:rgba(234,92,31,0.4);
+  --up:#22c55e;--up-soft:rgba(34,197,94,0.14);--down:#ef4444;--down-soft:rgba(239,68,68,0.14);
+  --hair:rgba(255,255,255,0.055);--hair-2:rgba(255,255,255,0.1);--hair-3:rgba(255,255,255,0.14);
+  --f-d:'Barlow Condensed',ui-sans-serif,sans-serif;
+  --f-b:'Geist',ui-sans-serif,sans-serif;
+  --f-n:'JetBrains Mono',ui-monospace,monospace;
+  --spring:cubic-bezier(0.22,1,0.36,1);--glide:cubic-bezier(0.25,0.46,0.45,0.94);
+  --nav-h:72px;--safe-top:env(safe-area-inset-top,0px);--safe-bot:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow-x:hidden}
+html{background:#000}
+body{font-family:var(--f-b);font-size:14px;letter-spacing:-.01em;color:var(--ink-1);background:var(--bg-0);-webkit-font-smoothing:antialiased;overscroll-behavior-y:none}
+button{font-family:inherit;color:inherit;background:none;border:0;cursor:pointer}
+input,select{font-family:inherit;color:inherit}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* ── App shell ── */
+.stage{min-height:100dvh;display:flex;align-items:center;justify-content:center;background:var(--bg-0)}
+.app{position:relative;width:100%;max-width:430px;height:100dvh;background:var(--bg-1);overflow:hidden;isolation:isolate;transform:translateZ(0)}
+@media(min-width:640px){
+  .stage{padding:24px}
+  .app{height:min(900px,calc(100dvh - 48px));border-radius:44px;border:1px solid var(--hair-2);box-shadow:0 60px 120px -30px rgba(0,0,0,.85),0 30px 60px -30px rgba(234,92,31,.12)}
+}
+
+/* ── 2 performance-friendly orbs ── */
+.bg-orbs{position:absolute;inset:0;overflow:hidden;z-index:0;pointer-events:none}
+.orb{position:absolute;border-radius:50%;will-change:auto}
+.orb-1{width:800px;height:800px;background:radial-gradient(circle at center,rgba(234,92,31,.26) 0%,rgba(234,92,31,.14) 25%,rgba(234,92,31,.05) 50%,transparent 70%);top:-310px;left:-240px}
+.orb-2{width:700px;height:700px;background:radial-gradient(circle at center,rgba(59,130,246,.20) 0%,rgba(59,130,246,.10) 25%,rgba(59,130,246,.03) 50%,transparent 70%);bottom:-240px;right:-220px}
+
+
+
+/* ── Directional page transitions ── */
+.page{
+  position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;
+  padding-bottom:calc(var(--nav-h) + var(--safe-bot) + 24px);
+  scrollbar-width:none;z-index:1;
+  opacity:0;pointer-events:none;
+  transform:translateX(0) scale(1);
+  transition:opacity .32s var(--spring),transform .4s var(--spring);
+}
+
+.page::-webkit-scrollbar{display:none}
+.page.enter-right{transform:translateX(36px);opacity:0}
+.page.enter-left{transform:translateX(-28px);opacity:0}
+.page.active{opacity:1;pointer-events:auto;transform:translateX(0)}
+
+/* Stagger children on page enter */
+.page.active .stagger>*{animation:rise .55s var(--spring) both}
+.page.active .stagger>*:nth-child(1){animation-delay:.04s}
+.page.active .stagger>*:nth-child(2){animation-delay:.09s}
+.page.active .stagger>*:nth-child(3){animation-delay:.14s}
+.page.active .stagger>*:nth-child(4){animation-delay:.19s}
+.page.active .stagger>*:nth-child(5){animation-delay:.24s}
+.page.active .stagger>*:nth-child(6){animation-delay:.29s}
+@keyframes rise{from{opacity:0;transform:translateY(12px) scale(.99)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+/* ── Glass bar ── */
+.glass-bar{background:linear-gradient(180deg,rgba(11,13,18,.97) 0%,rgba(11,13,18,.92) 100%);border-bottom:1px solid var(--hair);position:sticky;top:0;z-index:20}
+
+/* ── Topbar ── */
+.topbar{padding:14px 18px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--orange),#c23600);display:flex;align-items:center;justify-content:center;font-family:var(--f-d);font-weight:700;font-size:16px;color:#fff;box-shadow:0 8px 24px rgba(234,92,31,.35);position:relative;flex-shrink:0;overflow:hidden;transition:transform .2s var(--spring)}
+.avatar:active{transform:scale(.9)}
+.avatar img{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
+.avatar-edit{position:absolute;inset:0;background:rgba(0,0,0,.45);border-radius:50%;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s}
+.avatar:hover .avatar-edit,.avatar:active .avatar-edit{opacity:1}
+.avatar-edit svg{width:13px;height:13px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.avatar::after{content:"";position:absolute;bottom:-1px;right:-1px;width:10px;height:10px;background:var(--up);border:2px solid var(--bg-1);border-radius:50%;z-index:2}
+/* ── Profile sheet specific ── */
+.profile-photo-wrap{display:flex;flex-direction:column;align-items:center;gap:14px;padding:10px 0 20px}
+.profile-photo-btn{width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,var(--orange),#c23600);display:flex;align-items:center;justify-content:center;font-family:var(--f-d);font-weight:700;font-size:36px;color:#fff;box-shadow:0 12px 30px rgba(234,92,31,.35);position:relative;overflow:hidden;transition:transform .2s var(--spring);cursor:pointer}
+.profile-photo-btn:active{transform:scale(.93)}
+.profile-photo-btn img{width:100%;height:100%;object-fit:cover;display:block}
+.profile-photo-overlay{position:absolute;inset:0;background:rgba(0,0,0,.5);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;opacity:0;transition:opacity .2s}
+.profile-photo-btn:hover .profile-photo-overlay,.profile-photo-btn:active .profile-photo-overlay{opacity:1}
+.profile-photo-overlay svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.profile-photo-overlay span{font-size:9px;color:#fff;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+.profile-photo-hint{font-size:11px;color:var(--ink-3);text-align:center}
+.greet{display:flex;align-items:center;gap:12px}
+.greet-txt .hi{font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.1em}
+.greet-txt .name{font-weight:600;font-size:14px;color:var(--ink-0)}
+.top-actions{display:flex;gap:8px}
+.icon-btn{width:40px;height:40px;border-radius:14px;background:var(--surface-card);border:1px solid var(--hair);display:flex;align-items:center;justify-content:center;transition:all .2s var(--spring);flex-shrink:0}
+.icon-btn:active{transform:scale(.9)}
+.icon-btn svg{width:18px;height:18px;stroke:var(--ink-1);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.back-btn{width:40px;height:40px;border-radius:14px;background:var(--surface-card);border:1px solid var(--hair);display:flex;align-items:center;justify-content:center;transition:all .2s var(--spring)}
+.back-btn:active{transform:scale(.9)}
+.back-btn svg{width:16px;height:16px;stroke:var(--ink-1);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ── Balance card ── */
+.balance-wrap{padding:18px 18px 0}
+.balance-card{position:relative;padding:22px 20px 20px;border-radius:26px;background:radial-gradient(120% 100% at 0% 0%,rgba(234,92,31,.18),transparent 55%),linear-gradient(135deg,#1c2029,#14171f);border:1px solid var(--hair-2);overflow:hidden;box-shadow:0 20px 50px -20px rgba(0,0,0,.6)}
+.balance-card::after{content:"";position:absolute;right:-30px;top:-30px;width:180px;height:180px;pointer-events:none;background:radial-gradient(circle at 60% 40%,rgba(234,92,31,.12),transparent 70%);border-radius:50%}
+.bal-label{font-size:11px;color:var(--ink-2);text-transform:uppercase;letter-spacing:.12em;display:flex;align-items:center;gap:8px;position:relative;z-index:1}
+.bal-label::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--hair-2),transparent)}
+.bal-main{font-family:var(--f-n);font-weight:500;font-size:42px;line-height:1;letter-spacing:-.03em;color:var(--ink-0);margin-top:10px;display:flex;align-items:baseline;gap:4px;position:relative;z-index:1}
+.bal-main .cur{font-size:22px;color:var(--ink-2)}
+.bal-delta{margin-top:8px;display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:var(--up-soft);color:var(--up);font-size:12px;font-weight:500;font-family:var(--f-n);position:relative;z-index:1}
+.bal-delta.dn{background:var(--down-soft);color:var(--down)}
+.bal-delta.neutral{background:rgba(255,255,255,.07);color:var(--ink-3)}
+.bal-delta svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.bal-split{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:18px;position:relative;z-index:1}
+.bal-pill{padding:11px 12px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid var(--hair);text-align:left;transition:transform .2s var(--spring)}
+.bal-pill:active{transform:scale(.96)}
+.bal-pill .pl-top{display:flex;align-items:center;gap:6px;color:var(--ink-2);font-size:10px;text-transform:uppercase;letter-spacing:.08em}
+.bal-pill .pl-top svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.bal-pill .pl-val{font-family:var(--f-n);font-size:15px;font-weight:500;color:var(--ink-0);margin-top:3px}
+.bal-pill .pl-sub{font-size:9px;color:var(--ink-3);margin-top:1px}
+
+/* ── Quick actions ── */
+.qa-row{padding:16px 18px 0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.qa{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:18px;background:var(--surface-card);border:1px solid var(--hair);text-align:left;transition:all .2s var(--spring)}
+.qa:active{transform:scale(.96)}
+.qa-ic{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.qa-ic svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.qa-txt .qa-ttl{font-weight:600;font-size:13px;color:var(--ink-0)}
+.qa-txt .qa-sub{font-size:10px;color:var(--ink-3);margin-top:1px}
+.qa.primary .qa-ic{background:var(--orange);color:#fff;box-shadow:0 8px 20px rgba(234,92,31,.35)}
+.qa.secondary .qa-ic{background:var(--bg-3);color:var(--orange);border:1px solid var(--hair)}
+
+/* ── Section header ── */
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;padding:22px 18px 10px}
+.sec-ttl{font-family:var(--f-d);text-transform:uppercase;letter-spacing:.08em;font-size:13px;font-weight:700;color:var(--ink-1)}
+.sec-more{font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em}
+
+/* ── Favourites ── */
+.fav-scroll{
+  padding:4px 18px 6px;
+  display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;
+  scroll-snap-type:x mandatory;scroll-padding-left:18px;
+  -webkit-overflow-scrolling:touch;
+  mask-image:linear-gradient(to right,transparent 0,black 32px,black 100%);
+  -webkit-mask-image:linear-gradient(to right,transparent 0,black 32px,black 100%);
+}
+.fav-scroll::after{content:"";flex-shrink:0;width:calc(42% - 10px);min-width:1px;pointer-events:none}
+.fav-scroll::-webkit-scrollbar{display:none}
+.fav-card{min-width:0;width:calc(58% - 5px);flex-shrink:0;padding:14px;border-radius:18px;background:var(--surface-card);border:1px solid var(--hair);position:relative;overflow:hidden;text-align:left;scroll-snap-align:start;transition:transform .2s var(--spring)}
+.fav-card:active{transform:scale(.97)}
+.fav-dots{display:flex;justify-content:center;gap:6px;padding:10px 0 0}
+.fav-dot{width:20px;height:3px;border-radius:2px;background:var(--hair-3);transition:all .3s var(--spring)}
+.fav-dot.on{width:28px;background:var(--orange);box-shadow:0 0 8px var(--orange-glow)}
+.fav-head{display:flex;align-items:center;justify-content:space-between}
+.fav-ic{width:30px;height:30px;border-radius:10px;background:var(--bg-3);display:flex;align-items:center;justify-content:center;color:var(--orange)}
+.fav-ic svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.fav-tag{font-family:var(--f-d);font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--orange);padding:3px 7px;background:var(--orange-soft);border-radius:6px}
+.fav-name{font-weight:600;font-size:13px;color:var(--ink-0);margin-top:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fav-cat{font-size:10px;color:var(--ink-3);margin-top:2px}
+.fav-val{font-family:var(--f-n);font-size:14px;font-weight:500;color:var(--ink-0);margin-top:8px}
+.fav-chg{font-family:var(--f-n);font-size:11px;color:var(--up);margin-top:2px}
+.fav-chg.dn{color:var(--down)}
+.fav-spark{position:absolute;right:12px;top:14px;width:60px;height:24px;opacity:.8}
+
+/* ── Swipe-to-reveal rows ── */
+.swipe-wrap{position:relative;overflow:hidden;border-radius:16px;transform:translateZ(0)}
+.swipe-actions{
+  position:absolute;right:0;top:0;bottom:0;
+  display:flex;align-items:stretch;gap:0;
+  border-radius:0 16px 16px 0;
+  overflow:hidden;
+  transform:translateX(100%);
+  transition:transform .25s var(--spring);
+  will-change:transform
+}
+.swipe-actions.revealed{transform:translateX(0)}
+.sw-btn{
+  width:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+  transition:background .15s;padding:0 6px
+}
+.sw-btn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.sw-fav{color:var(--orange);background:rgba(234,92,31,.18)}
+.sw-fav:active{background:rgba(234,92,31,.3)}
+.sw-fav.on{color:#fff;background:var(--orange)}
+.sw-sell{color:var(--up);background:rgba(34,197,94,.14)}
+.sw-sell:active{background:rgba(34,197,94,.28)}
+.sw-sell.on{color:#fff;background:var(--up)}
+
+.hold-row{
+  display:flex;align-items:center;gap:14px;padding:13px 14px;
+  border-radius:16px;transition:background .15s,transform .25s var(--spring);
+  cursor:pointer;width:100%;text-align:left;position:relative;z-index:1;background:transparent;
+  will-change:transform
+}
+.hold-row:hover{background:var(--surface-card)}
+.hold-row:active{background:var(--surface-elev)}
+.hold-ic{width:42px;height:42px;border-radius:14px;background:var(--bg-3);border:1px solid var(--hair);display:flex;align-items:center;justify-content:center;color:var(--ink-1);flex-shrink:0;overflow:hidden}
+.hold-ic svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.hold-ic img{width:100%;height:100%;object-fit:cover}
+.hold-mid{flex:1;min-width:0}
+.hold-name{font-weight:600;font-size:14px;color:var(--ink-0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hold-meta{font-size:11px;color:var(--ink-3);margin-top:2px}
+.hold-right{text-align:right;flex-shrink:0}
+.hold-val{font-family:var(--f-n);font-size:14px;font-weight:500;color:var(--ink-0)}
+.hold-chg{font-family:var(--f-n);font-size:11px;color:var(--up);margin-top:2px}
+.hold-chg.dn{color:var(--down)}
+
+/* ── Search bar ── */
+.search-wrap{padding:10px 18px 0;position:relative}
+.search-inner{display:flex;align-items:center;gap:10px;padding:0 14px;height:44px;background:var(--bg-2);border:1px solid var(--hair);border-radius:14px;transition:border-color .2s}
+.search-inner:focus-within{border-color:var(--orange)}
+.search-inner svg{width:15px;height:15px;stroke:var(--ink-3);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.search-inp{flex:1;background:none;border:none;outline:none;font-size:13px;color:var(--ink-0)}
+.search-inp::placeholder{color:var(--ink-4)}
+.search-clear{width:20px;height:20px;border-radius:50%;background:var(--bg-4);color:var(--ink-3);font-size:11px;display:none;align-items:center;justify-content:center;flex-shrink:0}
+.search-clear.on{display:flex}
+
+/* ── Sort bar ── */
+.sort-bar{display:flex;align-items:center;gap:8px;padding:10px 18px 0;overflow-x:auto;scrollbar-width:none}
+.sort-bar::-webkit-scrollbar{display:none}
+.sort-chip{padding:6px 12px;border-radius:999px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;border:1px solid var(--hair);color:var(--ink-3);background:var(--surface-card);white-space:nowrap;transition:all .2s var(--spring);flex-shrink:0}
+.sort-chip:active{transform:scale(.94)}
+.sort-chip.on{border-color:var(--orange);color:var(--orange);background:var(--orange-soft)}
+.cat-chips{display:flex;gap:6px;flex-wrap:wrap;padding:8px 18px 0}
+.cat-chip{padding:6px 12px;border-radius:999px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;border:1px solid var(--hair);color:var(--ink-3);background:var(--surface-card);white-space:nowrap;transition:all .2s var(--spring)}
+.cat-chip:active{transform:scale(.94)}
+.cat-chip.on{border-color:var(--orange);color:var(--orange);background:var(--orange-soft)}
+.hw-count-row{display:flex;align-items:baseline;justify-content:space-between;padding:14px 18px 8px}
+.hw-count-ttl{font-family:var(--f-d);text-transform:uppercase;font-size:13px;font-weight:700;letter-spacing:.08em;color:var(--ink-1)}
+.hw-count-n{font-size:11px;color:var(--ink-3)}
+.hold-list{padding:0 10px;display:flex;flex-direction:column;gap:2px}
+
+/* ── Hardware summary strip ── */
+.hw-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px 18px 0}
+.hw-pill{padding:12px;border-radius:16px;background:var(--surface-card);border:1px solid var(--hair);text-align:center}
+.hw-pill .hp-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);font-weight:700}
+.hw-pill .hp-val{font-family:var(--f-n);font-size:15px;font-weight:500;color:var(--ink-0);margin-top:3px}
+
+/* ── Empty state ── */
+.empty-block{display:flex;flex-direction:column;align-items:center;padding:48px 28px;gap:12px;text-align:center}
+.empty-illo{width:64px;height:64px;border-radius:20px;background:var(--bg-3);border:1px solid var(--hair);display:flex;align-items:center;justify-content:center;margin-bottom:4px}
+.empty-illo svg{width:30px;height:30px;stroke:var(--ink-4);fill:none;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round}
+.empty-block h3{font-family:var(--f-d);font-size:22px;font-weight:700;text-transform:uppercase;color:var(--ink-2);letter-spacing:.04em}
+.empty-block p{font-size:13px;color:var(--ink-3);line-height:1.6;max-width:240px}
+.empty-cta{height:48px;padding:0 24px;background:var(--orange);color:#fff;border-radius:14px;font-weight:600;font-size:13px;margin-top:6px;box-shadow:0 8px 20px rgba(234,92,31,.3);transition:transform .2s var(--spring)}
+.empty-cta:active{transform:scale(.96)}
+
+/* ── Nav ── */
+.nav{position:absolute;bottom:calc(var(--safe-bot) + 12px);left:14px;right:14px;height:64px;background:rgba(14,17,24,.97);border:1px solid var(--hair-2);border-radius:22px;display:grid;grid-template-columns:1fr 1fr 72px 1fr 1fr;align-items:center;padding:0 6px;z-index:30;box-shadow:0 20px 50px -15px rgba(0,0,0,.6)}
+.nav-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;height:100%;color:var(--ink-3);transition:color .25s var(--spring);position:relative}
+.nav-btn.on{color:var(--ink-0)}
+.nav-btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;transition:transform .3s var(--spring)}
+.nav-btn:active svg{transform:scale(.85)}
+.nav-btn.on::before{content:"";position:absolute;top:-1px;left:50%;transform:translateX(-50%);width:22px;height:2px;background:var(--orange);border-radius:0 0 2px 2px;box-shadow:0 0 12px var(--orange-glow)}
+.nav-lbl{font-size:9px;letter-spacing:.08em;text-transform:uppercase;font-weight:600}
+.nav-cta{width:58px;height:58px;justify-self:center;background:var(--orange);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 24px rgba(234,92,31,.5);transition:transform .25s var(--spring);transform:translateY(-12px)}
+.nav-cta:active{transform:translateY(-12px) scale(.91)}
+.nav-cta svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ── Detail page ── */
+.dt-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 18px}
+.dt-title{font-family:var(--f-d);font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+.dt-hero{padding:6px 18px 8px}
+.dt-hero-img{width:100%;aspect-ratio:16/9;border-radius:20px;object-fit:cover;margin-bottom:14px;border:1px solid var(--hair);display:none}
+.dt-hero-img.on{display:block}
+.dt-cat{font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.dt-name{font-family:var(--f-d);font-weight:700;font-size:28px;line-height:1;color:var(--ink-0);text-transform:uppercase}
+.dt-price-row{display:flex;align-items:baseline;gap:10px;margin-top:12px;flex-wrap:wrap}
+.dt-price{font-family:var(--f-n);font-size:34px;font-weight:500;color:var(--ink-0);letter-spacing:-.03em}
+.dt-pnl{font-family:var(--f-n);font-size:13px;padding:4px 10px;border-radius:999px;background:var(--up-soft);color:var(--up)}
+.dt-pnl.dn{background:var(--down-soft);color:var(--down)}
+.dt-status-badge{padding:3px 10px;border-radius:8px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+
+/* ── Market search button ── */
+.mp-row{padding:14px 18px 0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mp-btn{height:46px;border-radius:14px;font-weight:600;font-size:12px;display:flex;align-items:center;justify-content:center;gap:8px;transition:transform .2s var(--spring);text-transform:uppercase;letter-spacing:.04em}
+.mp-btn:active{transform:scale(.96)}
+.mp-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.mp-marktplaats{background:rgba(234,92,31,.1);color:var(--orange);border:1px solid rgba(234,92,31,.25)}
+.mp-ebay{background:rgba(255,255,255,.04);color:var(--ink-2);border:1px solid var(--hair)}
+
+/* ── Graph ── */
+.graph-wrap{margin:16px 16px 0;padding:16px 12px 10px;border-radius:22px;background:var(--surface-card);border:1px solid var(--hair)}
+.graph-svg{width:100%;height:170px;display:block;overflow:visible}
+.graph-line{fill:none;stroke:var(--orange);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 10px rgba(234,92,31,.4))}
+.graph-fill{fill:url(#grad-fill);opacity:0;animation:fadeG 1s .7s forwards}
+@keyframes fadeG{to{opacity:1}}
+.graph-dot{fill:var(--orange);stroke:var(--bg-1);stroke-width:2;opacity:0;animation:fadeG .4s 1.2s forwards}
+.real-data-badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;color:var(--up);background:var(--up-soft);padding:3px 8px;border-radius:999px;margin-bottom:8px;font-family:var(--f-n)}
+.fake-data-badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;color:var(--ink-3);background:rgba(255,255,255,.05);padding:3px 8px;border-radius:999px;margin-bottom:8px;font-family:var(--f-n)}
+.range-tabs{display:flex;gap:4px;justify-content:center;margin-top:8px;padding:4px;background:var(--bg-2);border-radius:12px}
+.range-tab{padding:6px 12px;border-radius:9px;font-size:11px;font-weight:500;color:var(--ink-3);text-transform:uppercase;transition:all .2s var(--spring)}
+.range-tab.on{background:var(--bg-4);color:var(--ink-0);box-shadow:0 2px 6px rgba(0,0,0,.3)}
+
+/* ── Metrics ── */
+.metrics-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:16px 18px 0}
+.metric{padding:14px;border-radius:18px;background:var(--surface-card);border:1px solid var(--hair)}
+.metric-lbl{font-size:10px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.metric-val{font-family:var(--f-n);font-size:18px;font-weight:500;color:var(--ink-0)}
+.metric-sub{font-size:11px;color:var(--ink-2);margin-top:4px}
+.specs-card{margin:16px 18px 0;padding:14px 16px;border-radius:18px;background:var(--surface-card);border:1px solid var(--hair)}
+.specs-ttl{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-3);margin-bottom:10px;font-weight:600}
+.spec-row{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--hair)}
+.spec-row:last-child{border-bottom:0}
+.spec-k{font-size:12px;color:var(--ink-2);flex-shrink:0}
+.spec-v{font-size:12px;color:var(--ink-1);font-weight:500;font-family:var(--f-n);text-align:right;word-break:break-word}
+
+/* ── Action buttons ── */
+.dt-actions{padding:14px 18px 0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.action-btn{height:50px;border-radius:16px;font-weight:600;font-size:13px;display:flex;align-items:center;justify-content:center;gap:8px;transition:transform .2s var(--spring)}
+.action-btn:active{transform:scale(.96)}
+.action-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.action-primary{background:var(--orange);color:#fff;box-shadow:0 8px 20px rgba(234,92,31,.3)}
+.action-secondary{background:var(--surface-card);color:var(--ink-1);border:1px solid var(--hair-2)}
+
+/* Inline double-confirm delete ── */
+.delete-zone{padding:10px 18px 0}
+.delete-zone button{
+  width:100%;height:44px;border-radius:14px;
+  background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.18);
+  color:var(--down);font-size:13px;font-weight:500;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:background .2s,transform .2s var(--spring)
+}
+.delete-zone button.confirming{background:rgba(239,68,68,.18);border-color:rgba(239,68,68,.4);color:#fff}
+.delete-zone button:active{transform:scale(.98)}
+.delete-zone button svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ── Analytics ── */
+.donut-card{margin:12px 18px 0;padding:20px 18px;border-radius:24px;background:var(--surface-card);border:1px solid var(--hair);display:flex;align-items:center;gap:16px}
+.donut-wrap{position:relative;width:150px;height:150px;flex-shrink:0}
+.donut-svg{width:100%;height:100%;transform:rotate(-90deg)}
+.donut-svg circle{fill:none;stroke-width:18}
+.donut-bg{stroke:var(--bg-3)}
+.donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.donut-lbl{font-size:10px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.1em}
+.donut-val{font-family:var(--f-n);font-size:18px;font-weight:500;color:var(--ink-0);margin-top:2px}
+.donut-legend{display:flex;flex-direction:column;gap:8px;flex:1;min-width:0}
+.leg-row{display:flex;align-items:center;gap:8px;min-width:0}
+.leg-dot{width:9px;height:9px;border-radius:3px;flex-shrink:0}
+.leg-name{font-size:12px;color:var(--ink-1);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.leg-val{font-family:var(--f-n);font-size:10px;color:var(--ink-2);text-align:right}
+.trend-card{margin:12px 18px 0;padding:18px;border-radius:22px;background:var(--surface-card);border:1px solid var(--hair)}
+.trend-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;gap:8px}
+.trend-ttl{font-size:11px;color:var(--ink-2);text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+.trend-val{font-family:var(--f-n);font-size:22px;font-weight:500;color:var(--ink-0)}
+.trend-pct{font-family:var(--f-n);font-size:12px;color:var(--up);padding:3px 8px;background:var(--up-soft);border-radius:999px;flex-shrink:0}
+.trend-pct.dn{color:var(--down);background:var(--down-soft)}
+.trend-lbl{font-size:10px;color:var(--ink-4);margin-top:3px}
+.bars-wrap{display:flex;align-items:flex-end;gap:6px;height:90px;padding-top:8px}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px}
+.bar{width:100%;background:linear-gradient(180deg,var(--orange),rgba(234,92,31,.35));border-radius:5px 5px 2px 2px;transition:height 1.1s var(--spring);min-height:3px}
+.bar.real{background:linear-gradient(180deg,var(--up),rgba(34,197,94,.3))}
+.bar.zero{min-height:0;opacity:.2}
+.bar-lbl{font-size:9px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em;font-family:var(--f-n)}
+.insights-list{padding:0 18px;display:flex;flex-direction:column;gap:8px}
+.insight{padding:16px 18px;border-radius:20px;background:linear-gradient(135deg,rgba(234,92,31,.08),rgba(234,92,31,.02));border:1px solid rgba(234,92,31,.2);display:flex;align-items:center;gap:12px}
+.insight-ic{width:40px;height:40px;border-radius:12px;flex-shrink:0;background:var(--orange);display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 6px 16px rgba(234,92,31,.3)}
+.insight-ic svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.insight-ic.blue{background:#3b82f6;box-shadow:0 6px 16px rgba(59,130,246,.3)}
+.insight-ic.green{background:var(--up);box-shadow:0 6px 16px rgba(34,197,94,.3)}
+.insight-txt .insight-ttl{font-weight:600;font-size:13px;color:var(--ink-0)}
+.insight-txt .insight-sub{font-size:12px;color:var(--ink-2);margin-top:2px;line-height:1.45}
+
+/* ── Builds ── */
+.builds-summary{margin:0 16px 0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.bsum-pill{padding:12px 10px;border-radius:16px;background:var(--surface-card);border:1px solid var(--hair);text-align:center}
+.bsum-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);font-weight:600;margin-bottom:4px}
+.bsum-val{font-family:var(--f-n);font-size:14px;font-weight:500;color:var(--ink-0)}
+.bsum-val.up{color:var(--up)}.bsum-val.dn{color:var(--down)}
+.status-scroll{padding:10px 18px 0;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.status-scroll::-webkit-scrollbar{display:none}
+.status-chip{padding:7px 14px;border-radius:999px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;border:1px solid var(--hair);color:var(--ink-3);background:var(--surface-card);white-space:nowrap;transition:all .2s var(--spring);flex-shrink:0}
+.status-chip:active{transform:scale(.94)}
+.status-chip.on{border-color:var(--orange);color:var(--orange);background:var(--orange-soft)}
+.builds-list{padding:0 14px;display:flex;flex-direction:column;gap:10px}
+.build-mp-card{display:flex;align-items:stretch;border-radius:18px;background:var(--surface-card);border:1px solid var(--hair);overflow:hidden;text-align:left;transition:all .2s var(--spring);width:100%}
+.build-mp-card:hover{background:var(--surface-elev);border-color:var(--hair-2)}
+.build-mp-card:active{transform:scale(.985)}
+.bmp-photo{width:105px;flex-shrink:0;position:relative;background:var(--bg-3);overflow:hidden}
+.bmp-photo img{width:100%;height:100%;object-fit:cover;display:block}
+.bmp-photo-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--ink-4)}
+.bmp-photo-ph svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round}
+.bmp-status-badge{position:absolute;bottom:7px;left:7px;padding:3px 7px;border-radius:7px;font-size:9px;font-weight:700;text-transform:uppercase;}
+.bmp-body{flex:1;min-width:0;padding:12px 13px 10px}
+.bmp-title{font-family:var(--f-d);font-size:15px;font-weight:700;color:var(--ink-0);text-transform:uppercase;letter-spacing:.04em;line-height:1.2;margin-bottom:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.bmp-price{font-family:var(--f-n);font-size:18px;font-weight:500;color:var(--orange);letter-spacing:-.02em;margin-bottom:6px}
+.bmp-price-sub{font-size:10px;color:var(--ink-3);font-family:var(--f-b);font-weight:400;margin-left:3px}
+.bmp-badges{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.bmp-badge{padding:2px 7px;border-radius:7px;font-size:9px;font-weight:600;background:var(--bg-3);border:1px solid var(--hair);color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px}
+.bmp-badge.gpu{border-color:rgba(234,92,31,.3);color:var(--orange-2)}
+.bmp-badge.cpu{border-color:rgba(59,130,246,.3);color:#7dc4ff}
+.bmp-date{font-size:9px;color:var(--ink-4);margin-top:6px}
+
+/* Build detail */
+.bd-hero-wrap{position:relative;margin:6px 16px 14px;border-radius:20px;overflow:hidden;height:200px;background:var(--bg-3)}
+.bd-hero-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--ink-4)}
+.bd-hero-ph svg{width:44px;height:44px;stroke:currentColor;fill:none;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round}
+.bd-price-banner{position:absolute;bottom:0;left:0;right:0;padding:20px 16px 12px;background:linear-gradient(to top,rgba(7,8,11,.92),transparent)}
+.bd-price{font-family:var(--f-n);font-size:26px;font-weight:500;color:#fff;letter-spacing:-.02em}
+.bd-pnl{font-family:var(--f-n);font-size:11px;padding:3px 8px;border-radius:999px;background:var(--up-soft);color:var(--up);display:inline-block;margin-top:3px}
+.bd-pnl.dn{background:var(--down-soft);color:var(--down)}
+.bd-specs-card{margin:0 16px;padding:14px 16px;border-radius:18px;background:var(--surface-card);border:1px solid var(--hair)}
+.bd-specs-ttl{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-3);margin-bottom:10px;font-weight:600}
+
+/* Status colors */
+.s-sourcing{background:rgba(59,130,246,.3);color:#7dc4ff;border:1px solid rgba(59,130,246,.4)}
+.s-building{background:rgba(234,179,8,.3);color:#fcd34d;border:1px solid rgba(234,179,8,.4)}
+.s-listed{background:rgba(234,92,31,.3);color:#ff9262;border:1px solid rgba(234,92,31,.4)}
+.s-hold{background:rgba(90,95,107,.35);color:#9ba1ad;border:1px solid rgba(90,95,107,.4)}
+.s-sold{background:rgba(34,197,94,.25);color:#4ade80;border:1px solid rgba(34,197,94,.35)}
+
+/* ── Sheet (add/edit) ── */
+.sheet-backdrop{position:absolute;inset:0;z-index:40;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .3s var(--glide)}
+.sheet-backdrop.on{opacity:1;pointer-events:auto}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:41;background:var(--bg-1);border-top:1px solid var(--hair-2);border-radius:26px 26px 0 0;padding:10px 18px calc(var(--safe-bot) + 18px);transform:translateY(100%);transition:transform .45s var(--spring);max-height:92%;overflow-y:auto;box-shadow:0 -20px 60px rgba(0,0,0,.5)}
+.sheet.on{transform:translateY(0)}
+.sheet-grip{width:40px;height:4px;background:var(--hair-3);border-radius:2px;margin:0 auto 14px}
+.sheet-ttl{font-family:var(--f-d);font-weight:700;font-size:22px;text-transform:uppercase;margin-bottom:3px}
+.sheet-sub{font-size:12px;color:var(--ink-3);margin-bottom:18px}
+.field{margin-bottom:13px}
+.field-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-3);margin-bottom:5px;font-weight:600}
+.field-inp{width:100%;height:46px;padding:0 13px;background:var(--bg-2);border:1px solid var(--hair);border-radius:13px;color:var(--ink-0);font-size:14px;outline:none;transition:border-color .2s}
+.field-inp:focus{border-color:var(--orange);background:var(--bg-3)}
+.field-inp::placeholder{color:var(--ink-4)}
+.field-inp option{background:var(--bg-2)}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cat-pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.cat-pill{padding:7px 13px;border-radius:12px;background:var(--bg-2);border:1px solid var(--hair);font-size:11px;color:var(--ink-2);font-weight:500;transition:all .2s var(--spring);text-transform:uppercase}
+.cat-pill:active{transform:scale(.92)}
+.cat-pill.on{background:var(--orange);color:#fff;border-color:var(--orange);box-shadow:0 4px 14px rgba(234,92,31,.3)}
+.status-pill-sourcing.on{background:#3b82f6;border-color:#3b82f6}
+.status-pill-building.on{background:#eab308;border-color:#eab308;color:#000}
+.status-pill-listed.on{background:var(--orange);border-color:var(--orange)}
+.status-pill-hold.on{background:#5a5f6b;border-color:#5a5f6b}
+.status-pill-sold.on{background:var(--up);border-color:var(--up)}
+.autocomplete{position:relative}
+.ac-dd{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:2;background:var(--bg-3);border:1px solid var(--hair-2);border-radius:12px;max-height:180px;overflow-y:auto;display:none;box-shadow:0 20px 40px rgba(0,0,0,.4)}
+.ac-dd.on{display:block}
+.ac-item{padding:10px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--hair)}
+.ac-item:last-child{border-bottom:0}
+.ac-item:hover{background:var(--surface-elev);color:var(--orange)}
+.sheet-save{width:100%;height:52px;margin-top:8px;background:var(--orange);color:#fff;border-radius:17px;font-weight:600;font-size:14px;box-shadow:0 12px 30px rgba(234,92,31,.3);transition:transform .2s var(--spring)}
+.sheet-save:active{transform:scale(.97)}
+.sheet-del{width:100%;height:40px;margin-top:4px;background:none;color:var(--down);font-size:13px;opacity:.7;transition:opacity .15s}
+.sheet-del:hover{opacity:1}
+
+/* ── Build sheet specific ── */
+.build-img-upload-ph{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;height:180px;border:2px dashed var(--hair-3);border-radius:18px;background:var(--bg-2);color:var(--ink-3);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;cursor:pointer;transition:all .2s var(--spring);position:relative}
+.build-img-upload-ph:hover{border-color:var(--orange);color:var(--orange)}
+.build-img-upload-ph svg{width:30px;height:30px;stroke:currentColor;fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+.build-img-upload-ph .img-badge{position:absolute;top:10px;right:10px;background:var(--orange-soft);border:1px solid var(--orange);color:var(--orange);font-size:9px;font-weight:700;padding:3px 8px;border-radius:7px;letter-spacing:.1em}
+.build-img-preview-box{position:relative;border-radius:18px;overflow:hidden;height:180px}
+.build-img-preview{width:100%;height:100%;object-fit:cover;display:block}
+.build-img-remove{position:absolute;top:10px;right:10px;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.7);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s}
+.build-img-remove:hover{background:rgba(239,68,68,.8)}
+.specs-input-list{display:flex;flex-direction:column;border:1px solid var(--hair);border-radius:14px;overflow:hidden;background:var(--bg-2)}
+.spec-inp-row{display:flex;align-items:center;border-bottom:1px solid var(--hair)}
+.spec-inp-row:last-child{border-bottom:0}
+.spec-inp-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);font-weight:700;padding:0 13px;min-width:70px;flex-shrink:0}
+.spec-inp-sep{width:1px;height:26px;background:var(--hair)}
+.spec-inp-field{flex:1;height:44px;padding:0 13px;background:transparent;border:none;color:var(--ink-0);font-size:13px;outline:none;font-family:var(--f-b)}
+.spec-inp-field::placeholder{color:var(--ink-4)}
+.spec-inp-field:focus{color:var(--orange)}
+.select-wrap{position:relative}
+.select-wrap select{width:100%}
+.select-wrap::after{content:"";position:absolute;right:12px;top:50%;transform:translateY(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:5px solid var(--ink-3);pointer-events:none}
+
+/* ── Image upload (asset) ── */
+.img-upload-ph{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;height:120px;border:1.5px dashed var(--hair-3);border-radius:14px;background:var(--bg-2);color:var(--ink-3);font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;transition:border-color .2s}
+.img-upload-ph:hover{border-color:var(--orange-2)}
+.img-upload-ph svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.img-preview-box{position:relative;border-radius:14px;overflow:hidden}
+.img-preview{width:100%;height:120px;object-fit:cover;display:block}
+.img-remove{position:absolute;top:7px;right:7px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.65);border:1px solid rgba(255,255,255,.15);color:#fff;font-size:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s}
+.img-remove:hover{background:rgba(239,68,68,.7)}
+
+/* ── Settings sheet ── */
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--hair);gap:12px}
+.settings-row:last-child{border-bottom:0}
+.settings-lbl{font-size:13px;color:var(--ink-1)}
+.settings-sub{font-size:11px;color:var(--ink-3);margin-top:2px}
+.settings-danger{color:var(--down)}
+
+/* ── Toast ── */
+.toast{position:absolute;top:calc(var(--safe-top) + 18px);left:50%;transform:translateX(-50%) translateY(-70px);padding:11px 16px;background:var(--bg-4);border:1px solid var(--hair-3);border-radius:999px;font-size:12px;font-weight:500;display:flex;align-items:center;gap:8px;z-index:100;box-shadow:0 16px 36px rgba(0,0,0,.4);transition:transform .4s var(--spring);white-space:nowrap}
+.toast.on{transform:translateX(-50%) translateY(0)}
+.toast svg{width:13px;height:13px;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ── Modal ── */
+.modal-bg{position:absolute;inset:0;z-index:50;background:rgba(0,0,0,.72);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:24px}
+.modal-bg.on{display:flex}
+.modal-box{background:var(--bg-2);border:1px solid var(--hair-2);border-radius:22px;padding:26px 22px 18px;width:100%;max-width:320px;text-align:center}
+.modal-box h3{font-family:var(--f-d);font-size:22px;font-weight:700;text-transform:uppercase;color:var(--ink-0);margin-bottom:8px}
+.modal-box p{font-size:13px;color:var(--ink-2);line-height:1.5;margin-bottom:16px}
+.modal-box .field-inp{margin-bottom:16px;text-align:center;font-family:var(--f-n);font-size:18px}
+.modal-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.modal-btns button{height:46px;border-radius:13px;font-weight:600;font-size:13px;transition:transform .15s}
+.modal-btns button:active{transform:scale(.96)}
+.btn-cancel{background:var(--surface-card);color:var(--ink-1);border:1px solid var(--hair-2)}
+.btn-ok{background:var(--orange);color:#fff;box-shadow:0 8px 18px rgba(234,92,31,.28)}
+.btn-ok.danger{background:var(--down);box-shadow:0 8px 18px rgba(239,68,68,.28)}
+</style>
+</head>
+<body>
+<div class="stage"><div class="app">
+
+<div class="bg-orbs" aria-hidden="true">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+</div>
+
+<!-- ═══ HOME ═══ -->
+<section id="home" class="page">
+  <div class="topbar glass-bar">
+    <div class="greet">
+      <button class="avatar" id="home-avatar" data-action="open-profile"><span id="avatar-letter">M</span><div class="avatar-edit"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div></button>
+      <div class="greet-txt"><div class="hi">Welkom terug</div><div class="name" id="home-username">Massi</div></div>
+    </div>
+    <div class="top-actions">
+      <button class="icon-btn" data-action="cash"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg></button>
+      <button class="icon-btn" data-action="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+    </div>
+  </div>
+  <div class="stagger">
+    <div class="balance-wrap">
+      <div class="balance-card">
+        <div class="bal-label">Totaal vermogen</div>
+        <div class="bal-main"><span class="cur">€</span><span id="bal-int">0</span></div>
+        <div class="bal-delta neutral" id="bal-delta">
+          <svg viewBox="0 0 24 24"><path d="M7 17l9-9M7 8h9v9"/></svg>
+          <span id="bal-delta-txt">Voeg items toe om te beginnen</span>
+        </div>
+        <div class="bal-split" style="grid-template-columns:1fr 1fr 1fr">
+          <button class="bal-pill" data-action="goto-hardware">
+            <div class="pl-top"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 7h10v10H7z"/></svg><span>Assets</span></div>
+            <div class="pl-val" id="pill-hw">€0</div>
+            <div class="pl-sub"><span id="pill-hw-n">0</span> items</div>
+          </button>
+          <button class="bal-pill" data-action="goto-profile">
+            <div class="pl-top"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="1"/><path d="M8 21h8M12 17v4"/></svg><span>Builds</span></div>
+            <div class="pl-val" id="pill-builds">€0</div>
+            <div class="pl-sub"><span id="pill-builds-n">0</span> advertenties</div>
+          </button>
+          <button class="bal-pill" data-action="cash">
+            <div class="pl-top"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/></svg><span>Cash</span></div>
+            <div class="pl-val" id="pill-cash">€0</div>
+            <div class="pl-sub">Tap om te wijzigen</div>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="qa-row">
+      <button class="qa primary" data-action="add">
+        <div class="qa-ic"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div>
+        <div class="qa-txt"><div class="qa-ttl">Asset toevoegen</div><div class="qa-sub">GPU, CPU, RAM…</div></div>
+      </button>
+      <button class="qa secondary" data-action="add-build">
+        <div class="qa-ic"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="1"/><path d="M8 21h8M12 17v4"/></svg></div>
+        <div class="qa-txt"><div class="qa-ttl">Build plaatsen</div><div class="qa-sub">Volledige pc</div></div>
+      </button>
+    </div>
+    <div>
+      <div class="sec-hdr"><span class="sec-ttl">Favorieten</span><button class="sec-more" data-action="goto-hardware">Alle ↗</button></div>
+      <div class="fav-scroll" id="fav-scroll"></div>
+      <div class="fav-dots" id="fav-dots"></div>
+    </div>
+    <div>
+      <div class="sec-hdr"><span class="sec-ttl">Posities</span><button class="sec-more" data-action="goto-hardware">Bekijk alle ↗</button></div>
+      <div class="hold-list" id="hold-list"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ HARDWARE ═══ -->
+<section id="hardware" class="page">
+  <div class="glass-bar">
+    <div class="topbar">
+      <div class="greet">
+        <button class="back-btn" data-action="goto-home"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <div class="greet-txt" style="margin-left:4px"><div class="hi">Holdings</div><div class="name" style="font-family:var(--f-d);text-transform:uppercase;font-size:18px">Assets</div></div>
+      </div>
+      <button class="icon-btn" data-action="add"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+    </div>
+    <div class="search-wrap">
+      <div class="search-inner">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input class="search-inp" id="hw-search" placeholder="Zoek model, categorie…" autocomplete="off">
+        <button class="search-clear" id="hw-search-clear" data-action="clear-search">✕</button>
+      </div>
+    </div>
+  </div>
+  <div class="stagger">
+    <div class="hw-strip">
+      <div class="hw-pill"><div class="hp-lbl">Waarde</div><div class="hp-val" id="hw-total">€0</div></div>
+      <div class="hw-pill"><div class="hp-lbl">Inkoop</div><div class="hp-val" id="hw-bought">€0</div></div>
+      <div class="hw-pill"><div class="hp-lbl">P&amp;L</div><div class="hp-val" id="hw-pot" style="color:var(--up)">€0</div></div>
+    </div>
+    <div>
+      <div style="padding:14px 18px 0">
+        <div class="sort-bar" id="sort-bar"></div>
+      </div>
+      <div class="cat-chips" id="cat-filter-row"></div>
+    </div>
+    <div>
+      <div class="hw-count-row"><span class="hw-count-ttl" id="list-title">Alle items</span><span class="hw-count-n" id="list-count">0 items</span></div>
+      <div class="hold-list" id="hw-list"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ ASSET DETAIL ═══ -->
+<section id="detail" class="page">
+  <div class="dt-hdr glass-bar">
+    <button class="back-btn" id="detail-back-btn"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="dt-title">Positie</div>
+    <button class="icon-btn" data-action="toggle-fav" id="fav-btn"><svg id="fav-icon" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></button>
+  </div>
+  <div class="stagger">
+    <div class="dt-hero">
+      <img class="dt-hero-img" id="dt-hero-img" alt="" loading="lazy">
+      <div class="dt-cat"><span id="dt-cat">GPU</span><span class="dt-status-badge s-hold" id="dt-status-badge">In bezit</span></div>
+      <div class="dt-name" id="dt-name">—</div>
+      <div class="dt-price-row"><div class="dt-price">€<span id="dt-price">0</span></div><div class="dt-pnl" id="dt-pnl">+€0</div></div>
+    </div>
+    <div class="mp-row">
+      <button class="mp-btn mp-marktplaats" data-action="mp-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>Marktplaats</button>
+      <button class="mp-btn mp-ebay" data-action="ebay-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>eBay Klein.</button>
+    </div>
+    <div class="graph-wrap">
+      <div id="graph-data-badge"></div>
+      <svg class="graph-svg" id="graph-svg" viewBox="0 0 320 170" preserveAspectRatio="none">
+        <defs><linearGradient id="grad-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ea5c1f" stop-opacity="0.28"/><stop offset="100%" stop-color="#ea5c1f" stop-opacity="0"/></linearGradient></defs>
+        <g id="graph-grid"></g>
+        <path class="graph-fill" id="graph-fill"></path>
+        <path class="graph-line" id="graph-line"></path>
+        <circle class="graph-dot" id="graph-dot" cx="0" cy="0" r="4"></circle>
+      </svg>
+      <div class="range-tabs" id="range-tabs">
+        <button class="range-tab on" data-r="1M">1M</button>
+        <button class="range-tab" data-r="3M">3M</button>
+        <button class="range-tab" data-r="6M">6M</button>
+        <button class="range-tab" data-r="1J">1J</button>
+        <button class="range-tab" data-r="ALL">Alles</button>
+      </div>
+    </div>
+    <div class="metrics-grid">
+      <div class="metric"><div class="metric-lbl">Ingekocht</div><div class="metric-val">€<span id="m-buy">0</span></div><div class="metric-sub" id="m-buy-date">—</div></div>
+      <div class="metric"><div class="metric-lbl">Huidige waarde</div><div class="metric-val">€<span id="m-now">0</span></div><div class="metric-sub" id="m-age">—</div></div>
+      <div class="metric"><div class="metric-lbl">Winst/Verlies</div><div class="metric-val" id="m-dep">€0</div><div class="metric-sub" id="m-dep-eur">per stuk</div></div>
+      <div class="metric"><div class="metric-lbl">Vraagprijs</div><div class="metric-val" id="m-target">—</div><div class="metric-sub" id="m-margin">—</div></div>
+    </div>
+    <div class="specs-card"><div class="specs-ttl">Details</div><div id="specs-list"></div></div>
+    <div class="dt-actions">
+      <button class="action-btn action-secondary" data-action="edit-item"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Wijzigen</button>
+      <button class="action-btn action-primary" data-action="mark-sold" id="sell-btn"><svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span id="sell-btn-txt">Markeer verkocht</span></button>
+    </div>
+    <div class="delete-zone">
+      <button id="delete-asset-btn" data-action="inline-delete-asset">
+        <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6"/></svg>
+        <span id="delete-asset-txt">Verwijder item</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ ANALYTICS ═══ -->
+<section id="analytics" class="page">
+  <div class="topbar glass-bar">
+    <div class="greet-txt"><div class="hi">Inzichten</div><div class="name" style="font-family:var(--f-d);text-transform:uppercase;font-size:22px">Statistieken</div></div>
+  </div>
+  <div class="stagger">
+    <div class="donut-card">
+      <div class="donut-wrap">
+        <svg class="donut-svg" viewBox="0 0 160 160"><circle class="donut-bg" cx="80" cy="80" r="66"/><g id="donut-segs"></g></svg>
+        <div class="donut-center"><div class="donut-lbl">Totaal</div><div class="donut-val">€<span id="donut-total">0</span></div></div>
+      </div>
+      <div class="donut-legend" id="donut-legend"></div>
+    </div>
+    <div class="trend-card">
+      <div class="trend-hd">
+        <div><div class="trend-ttl">Netwaarde trend</div><div class="trend-val" id="trend-val">€0</div><div class="trend-lbl" id="trend-lbl">Laatste 6 maanden</div></div>
+        <div class="trend-pct" id="trend-pct">+0%</div>
+      </div>
+      <div class="bars-wrap" id="bars"></div>
+    </div>
+    <div class="sec-hdr"><span class="sec-ttl">Inzichten</span></div>
+    <div class="insights-list">
+      <div class="insight"><div class="insight-ic green"><svg viewBox="0 0 24 24"><path d="M7 17l9-9M7 8h9v9"/></svg></div><div class="insight-txt"><div class="insight-ttl">Portfolio groei</div><div class="insight-sub" id="ins1-sub">—</div></div></div>
+      <div class="insight" style="background:linear-gradient(135deg,rgba(59,130,246,.08),rgba(59,130,246,.02));border-color:rgba(59,130,246,.2)"><div class="insight-ic blue"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div><div class="insight-txt"><div class="insight-ttl">Hold-strategie</div><div class="insight-sub" id="ins2-sub">—</div></div></div>
+      <div class="insight"><div class="insight-ic"><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div><div class="insight-txt"><div class="insight-ttl">Top performer</div><div class="insight-sub" id="ins3-sub">—</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ BUILDS ═══ -->
+<section id="profile" class="page">
+  <div class="topbar glass-bar">
+    <div class="greet-txt"><div class="hi">Advertenties</div><div class="name" style="font-family:var(--f-d);text-transform:uppercase;font-size:22px">Builds</div></div>
+    <button class="icon-btn" data-action="add-build"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+  </div>
+  <div class="stagger">
+    <div style="padding:14px 0 0"><div class="builds-summary" id="builds-summary"></div></div>
+    <div class="status-scroll" id="status-filter-row"></div>
+    <div class="builds-list" id="build-grid"></div>
+  </div>
+</section>
+
+<!-- ═══ BUILD DETAIL ═══ -->
+<section id="build-detail" class="page">
+  <div class="dt-hdr glass-bar">
+    <button class="back-btn" id="bd-back-btn"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="dt-title">Build</div>
+    <button class="icon-btn" data-action="edit-build" id="bd-edit-btn"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+  </div>
+  <div class="stagger">
+    <div class="bd-hero-wrap" id="bd-hero-wrap">
+      <div class="bd-hero-ph"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="1"/><path d="M8 21h8M12 17v4"/></svg></div>
+      <div class="bd-price-banner"><div class="bd-price" id="bd-price">€0</div></div>
+    </div>
+    <div style="padding:0 16px 12px">
+      <div style="margin-bottom:8px" id="bd-status-area"></div>
+      <div style="font-family:var(--f-d);font-weight:700;font-size:24px;text-transform:uppercase;color:var(--ink-0);line-height:1.1;margin-bottom:5px" id="bd-name">—</div>
+      <div style="font-size:12px;color:var(--ink-3)" id="bd-meta">—</div>
+    </div>
+    <div class="bd-specs-card"><div class="bd-specs-ttl">Specificaties</div><div id="bd-specs-list"></div></div>
+    <div style="padding:12px 16px 0">
+      <div class="metrics-grid" style="padding:0;grid-template-columns:1fr 1fr">
+        <div class="metric"><div class="metric-lbl">Inkoopwaarde</div><div class="metric-val">€<span id="bd-m-buy">0</span></div></div>
+        <div class="metric"><div class="metric-lbl">Potentieel</div><div class="metric-val" id="bd-m-profit" style="color:var(--up)">+€0</div></div>
+      </div>
+    </div>
+    <div class="dt-actions" style="padding-left:16px;padding-right:16px">
+      <button class="action-btn action-secondary" data-action="bd-toggle-sold" id="bd-sell-btn"><svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span id="bd-sell-txt">Markeer verkocht</span></button>
+      <button class="action-btn action-primary" data-action="share-build"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/></svg>Delen</button>
+    </div>
+    <div class="delete-zone" style="padding-left:16px;padding-right:16px">
+      <button id="delete-build-btn" data-action="inline-delete-build">
+        <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        <span id="delete-build-txt">Verwijder build</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ ASSET SHEET ═══ -->
+<div class="sheet-backdrop" id="sheet-bd" data-action="close-sheet"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-grip"></div>
+  <div class="sheet-ttl" id="sheet-ttl">Nieuwe positie</div>
+  <div class="sheet-sub" id="sheet-sub">Hardware-asset toevoegen</div>
+  <div class="field">
+    <div class="field-lbl">Foto (optioneel)</div>
+    <div id="img-preview-wrap" class="img-upload-ph" data-action="pick-image">
+      <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      <span>Tap om foto toe te voegen</span>
+    </div>
+    <input type="file" id="f-img" accept="image/*" style="display:none">
+  </div>
+  <div class="field"><div class="field-lbl">Categorie</div><div class="cat-pills" id="cat-pills"></div></div>
+  <div class="field autocomplete"><div class="field-lbl">Model</div><input class="field-inp" id="f-name" placeholder="Bijv. RTX 5070 MSI Ventus 2X OC" autocomplete="off"><div class="ac-dd" id="ac-dd"></div></div>
+  <div class="pair">
+    <div class="field"><div class="field-lbl">Ingekocht (€)</div><input class="field-inp" id="f-buy" type="number" inputmode="decimal" step="0.01" placeholder="0,00"></div>
+    <div class="field"><div class="field-lbl">Waarde nu (€)</div><input class="field-inp" id="f-now" type="number" inputmode="decimal" step="0.01" placeholder="0,00"></div>
+  </div>
+  <div class="pair">
+    <div class="field"><div class="field-lbl">Vraagprijs (€)</div><input class="field-inp" id="f-ask" type="number" inputmode="decimal" step="0.01" placeholder="0,00"></div>
+    <div class="field"><div class="field-lbl">Aantal</div><input class="field-inp" id="f-units" type="number" inputmode="numeric" step="1" value="1"></div>
+  </div>
+  <div class="field"><div class="field-lbl">Aankoopdatum</div><input class="field-inp" id="f-date" type="date"></div>
+  <div class="field"><div class="field-lbl">Status</div><div class="cat-pills" id="status-pills"></div></div>
+  <div class="field"><div class="field-lbl">Notitie</div><input class="field-inp" id="f-note" placeholder="Serienummer, platform, garantie…"></div>
+  <button class="sheet-save" data-action="save-item" id="save-btn">Toevoegen aan portfolio</button>
+  <button class="sheet-del" data-action="confirm-delete-editing" id="del-btn" style="display:none">⚠ Verwijder dit item</button>
+</div>
+
+<!-- ═══ BUILD SHEET ═══ -->
+<div class="sheet-backdrop" id="build-sheet-bd" data-action="close-build-sheet"></div>
+<div class="sheet" id="build-sheet">
+  <div class="sheet-grip"></div>
+  <div class="sheet-ttl" id="bs-ttl">Nieuwe build</div>
+  <div class="sheet-sub" id="bs-sub">Complete pc advertentie plaatsen</div>
+  <div class="field">
+    <div id="bs-img-wrap" class="build-img-upload-ph" data-action="pick-build-image">
+      <div class="img-badge">FOTO</div>
+      <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      <span>Tap om foto toe te voegen</span>
+      <span style="font-size:10px;opacity:.6">Een goede foto verhoogt de kans op verkoop</span>
+    </div>
+    <input type="file" id="f-build-img" accept="image/*" style="display:none">
+  </div>
+  <div class="field"><div class="field-lbl">Advertentietitel</div><input class="field-inp" id="bs-title" placeholder="Bijv. Extreme Gaming PC 2026 — RTX 5090" autocomplete="off"></div>
+  <div class="pair">
+    <div class="field"><div class="field-lbl">Vraagprijs (€)</div><input class="field-inp" id="bs-ask" type="number" inputmode="decimal" step="0.01" placeholder="0,00"></div>
+    <div class="field"><div class="field-lbl">Inkoopwaarde (€)</div><input class="field-inp" id="bs-buy" type="number" inputmode="decimal" step="0.01" placeholder="0,00"></div>
+  </div>
+  <div class="field">
+    <div class="field-lbl">Specificaties</div>
+    <div class="specs-input-list">
+      <div class="spec-inp-row"><span class="spec-inp-lbl">GPU</span><div class="spec-inp-sep"></div><input class="spec-inp-field" id="bs-gpu" placeholder="Bijv. RTX 5090 FE 32GB"></div>
+      <div class="spec-inp-row"><span class="spec-inp-lbl">CPU</span><div class="spec-inp-sep"></div><input class="spec-inp-field" id="bs-cpu" placeholder="Bijv. Ryzen 9 9950X"></div>
+      <div class="spec-inp-row"><span class="spec-inp-lbl">RAM</span><div class="spec-inp-sep"></div><input class="spec-inp-field" id="bs-ram" placeholder="Bijv. 64GB DDR5-6000"></div>
+      <div class="spec-inp-row"><span class="spec-inp-lbl">OPSLAG</span><div class="spec-inp-sep"></div><input class="spec-inp-field" id="bs-ssd" placeholder="Bijv. 2TB Samsung 990 Pro"></div>
+      <div class="spec-inp-row"><span class="spec-inp-lbl">MOBO</span><div class="spec-inp-sep"></div><input class="spec-inp-field" id="bs-mobo" placeholder="Bijv. ASUS ROG Strix X870E"></div>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="field"><div class="field-lbl">Datum</div><input class="field-inp" id="bs-date" type="date"></div>
+    <div class="field"><div class="field-lbl">Status</div>
+      <div class="select-wrap">
+        <select class="field-inp" id="bs-status">
+          <option value="listed">Te koop</option>
+          <option value="hold">In bezit</option>
+          <option value="building">In aanbouw</option>
+          <option value="sourcing">Zoeken</option>
+          <option value="sold">Verkocht</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <div class="field"><div class="field-lbl">Notitie</div><input class="field-inp" id="bs-note" placeholder="Conditie, garantie, serienummer…"></div>
+  <button class="sheet-save" data-action="save-build" id="bs-save-btn">Build toevoegen</button>
+  <button class="sheet-del" data-action="confirm-delete-build-editing" id="bs-del-btn" style="display:none">⚠ Verwijder deze build</button>
+</div>
+
+<!-- ═══ PROFILE SHEET ═══ -->
+<div class="sheet-backdrop" id="profile-bd" data-action="close-profile"></div>
+<div class="sheet" id="profile-sheet">
+  <div class="sheet-grip"></div>
+  <div class="sheet-ttl">Profiel</div>
+  <div class="sheet-sub">Naam en profielfoto aanpassen</div>
+  <div class="profile-photo-wrap">
+    <button class="profile-photo-btn" id="profile-photo-btn" data-action="pick-profile-img">
+      <span id="profile-photo-letter">M</span>
+      <div class="profile-photo-overlay"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span>Wijzigen</span></div>
+    </button>
+    <div class="profile-photo-hint">Tap op de foto om te wijzigen</div>
+  </div>
+  <input type="file" id="f-profile-img" accept="image/*" style="display:none">
+  <div class="field">
+    <div class="field-lbl">Naam</div>
+    <input class="field-inp" id="f-profile-name" placeholder="Jouw naam" autocomplete="off" maxlength="32">
+  </div>
+  <button class="sheet-save" data-action="save-profile">Opslaan</button>
+</div>
+
+<!-- ═══ SETTINGS SHEET ═══ -->
+<div class="sheet-backdrop" id="settings-bd" data-action="close-settings"></div>
+<div class="sheet" id="settings-sheet">
+  <div class="sheet-grip"></div>
+  <div class="sheet-ttl">Instellingen</div>
+  <div class="sheet-sub">HW Tracker</div>
+  <div class="settings-row">
+    <div><div class="settings-lbl">Cash-balans</div><div class="settings-sub">Nu: <span id="set-cash-val">€0</span></div></div>
+    <button class="icon-btn" data-action="cash-from-settings"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+  </div>
+  <div class="settings-row">
+    <div><div class="settings-lbl">Exporteren</div><div class="settings-sub">Download backup als JSON</div></div>
+    <button class="icon-btn" data-action="export-data"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></button>
+  </div>
+  <div class="settings-row">
+    <div><div class="settings-lbl">Importeren</div><div class="settings-sub">Laad JSON backup — vervangt data</div></div>
+    <button class="icon-btn" data-action="import-data"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg></button>
+  </div>
+  <input type="file" id="f-import" accept=".json,application/json" style="display:none">
+  <div class="settings-row">
+    <div><div class="settings-lbl settings-danger">Alles wissen</div><div class="settings-sub">Verwijder alle items en data</div></div>
+    <button class="icon-btn" data-action="confirm-clear" style="border-color:rgba(239,68,68,.3)"><svg viewBox="0 0 24 24" style="stroke:var(--down)"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+  </div>
+</div>
+
+<!-- ═══ BOTTOM NAV ═══ -->
+<nav class="nav">
+  <button class="nav-btn on" data-page="home"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span class="nav-lbl">Home</span></button>
+  <button class="nav-btn" data-page="hardware"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M3 9h18"/></svg><span class="nav-lbl">Assets</span></button>
+  <button class="nav-cta" id="nav-fab"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+  <button class="nav-btn" data-page="analytics"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 14l3-3 4 4 5-5"/></svg><span class="nav-lbl">Stats</span></button>
+  <button class="nav-btn" data-page="profile"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span class="nav-lbl">Builds</span></button>
+</nav>
+
+<!-- ═══ MODAL ═══ -->
+<div class="modal-bg" id="modal-bg">
+  <div class="modal-box">
+    <h3 id="modal-title">Bevestigen</h3>
+    <p id="modal-msg">Weet je het zeker?</p>
+    <input class="field-inp" id="modal-input" type="number" inputmode="decimal" step="0.01" style="display:none">
+    <div class="modal-btns">
+      <button class="btn-cancel" id="modal-cancel">Annuleren</button>
+      <button class="btn-ok" id="modal-ok">OK</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+</div></div>
+
+<script>
+/* ═══════════════════ CONSTANTS ═══════════════════ */
+const LS_KEY='rig_v2', LS_BUILDS='hw_builds_v1';
+const CATS=['GPU','CPU','RAM','MOBO','SSD','PSU','COOLER','CASE','PERIPHERAL'];
+const STATUSES=['sourcing','building','listed','hold','sold'];
+const STATUS_LABELS={sourcing:'Zoeken',building:'Bouwen',listed:'Te koop',hold:'In bezit',sold:'Verkocht'};
+const STATUS_CSS={sourcing:'s-sourcing',building:'s-building',listed:'s-listed',hold:'s-hold',sold:'s-sold'};
+const CAT_COLORS={GPU:'#ea5c1f',CPU:'#ff7a3d',RAM:'#22c55e',MOBO:'#3b82f6',SSD:'#a855f7',PSU:'#eab308',COOLER:'#06b6d4',CASE:'#64748b',PERIPHERAL:'#ec4899','PC Builds':'#f59e0b'};
+const CAT_ICONS={
+  GPU:'<svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="1"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="12" r="2"/></svg>',
+  CPU:'<svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="1"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg>',
+  RAM:'<svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="1"/><path d="M6 7v10M10 7v10M14 7v10M18 7v10"/></svg>',
+  MOBO:'<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="1"/><rect x="7" y="7" width="5" height="5"/><circle cx="17" cy="9" r="1"/><circle cx="17" cy="14" r="1"/><path d="M7 16h7"/></svg>',
+  SSD:'<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M8 15h.01M12 15h.01"/></svg>',
+  PSU:'<svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="1"/><circle cx="17" cy="12" r="3"/><path d="M6 10v4M9 10v4"/></svg>',
+  COOLER:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v6M21 12h-6M12 21v-6M3 12h6"/></svg>',
+  CASE:'<svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="1"/><path d="M9 7h6M9 11h6"/><circle cx="12" cy="17" r="1"/></svg>',
+  PERIPHERAL:'<svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="14" rx="1"/><path d="M8 22h8M12 18v4"/></svg>',
+};
+const SUGG={
+  GPU:['RTX 5090','RTX 5080','RTX 5070 Ti','RTX 5070 MSI Ventus 2X OC','RTX 4090','RX 9070 XT','RX 7900 XTX'],
+  CPU:['Ryzen 9 9950X','Ryzen 7 9800X3D','Ryzen 7 9700X','Ryzen 5 9600X','Intel i9-14900K','Intel i7-14700K'],
+  RAM:['64GB DDR5-6000 Corsair','32GB DDR5-6400 G.Skill','32GB DDR5-6000 Kingston Fury'],
+  MOBO:['ASUS ROG Strix X870E','MSI MPG X870E Carbon','Gigabyte X870 Aorus Elite','ASUS TUF B650M-Plus'],
+  SSD:['Samsung 990 Pro 2TB','WD Black SN850X 2TB','Crucial T705 4TB'],
+  PSU:['Corsair RM1000x SHIFT','be quiet! Dark Power 13 1000W','Seasonic Focus GX-850'],
+  COOLER:['Noctua NH-D15','Arctic Liquid Freezer III 360','be quiet! Dark Rock Pro 5'],
+  CASE:['Fractal Design North','Lian Li O11 Dynamic Evo','NZXT H7 Flow'],
+  PERIPHERAL:['Logitech G Pro X Superlight 2','SteelSeries Apex Pro TKL','Samsung Odyssey G7 32"'],
+};
+const PAGE_LEVELS={home:0,hardware:1,analytics:1,profile:1,detail:2,'build-detail':2};
+const MONTH_NL=['Jan','Feb','Mrt','Apr','Mei','Jun','Jul','Aug','Sep','Okt','Nov','Dec'];
+const SORT_MODES=['value','pnl','date','name'];
+const SORT_LABELS={value:'Waarde ↓',pnl:'P&L ↓',date:'Nieuwst',name:'Naam A–Z'};
+
+/* ═══════════════════ STATE ═══════════════════ */
+let state, buildsState;
+function migrateItem(i){return {img:null,ask:i.now||i.buy||0,status:'hold',fav:false,units:1,...i};}
+try{
+  const raw=localStorage.getItem(LS_KEY)||localStorage.getItem('rig_v1');
+  if(raw){const p=JSON.parse(raw);state={cash:0,profileName:'Massi',profileImg:null,...p,items:(p.items||[]).filter(i=>i.cat!=='COMPLETE PC').map(migrateItem)};}
+  else{state={items:[],cash:0,profileName:'Massi',profileImg:null};}
+}catch(e){state={items:[],cash:0};}
+try{
+  const rawB=localStorage.getItem(LS_BUILDS);
+  if(rawB){buildsState=JSON.parse(rawB);}
+  else{
+    try{
+      const rawOld=localStorage.getItem(LS_KEY);
+      if(rawOld){const p=JSON.parse(rawOld);buildsState={builds:(p.items||[]).filter(i=>i.cat==='COMPLETE PC').map(item=>({id:item.id,title:item.name,ask:item.ask||item.now||item.buy||0,buy:item.buy||0,img:item.img||null,status:item.status||'hold',gpu:'',cpu:'',ram:'',ssd:'',mobo:'',date:item.date||'',note:item.note||''}))};} else{buildsState={builds:[]};}
+    }catch(e2){buildsState={builds:[]};}
+  }
+}catch(e){buildsState={builds:[]};}
+
+
+/* ═══════════════════ PROFILE ═══════════════════ */
+let profilePendingImg=null,profileImgRemoved=false;
+
+function renderAvatar(){
+  const name=state.profileName||'Massi';
+  const letter=name.trim()[0]?.toUpperCase()||'M';
+  const av=$('#home-avatar'),un=$('#home-username');
+  if(av){
+    const letterEl=$('#avatar-letter');
+    if(state.profileImg){
+      // Show photo — replace letter span with img
+      if(letterEl)letterEl.style.display='none';
+      let img=av.querySelector('img');
+      if(!img){img=document.createElement('img');img.alt='Profiel';av.insertBefore(img,av.firstChild);}
+      img.src=state.profileImg;img.style.display='block';
+    }else{
+      // Show letter
+      if(letterEl){letterEl.style.display='';letterEl.textContent=letter;}
+      const img=av.querySelector('img');if(img)img.style.display='none';
+    }
+  }
+  if(un)un.textContent=name;
+}
+
+function openProfileSheet(){
+  const name=state.profileName||'Massi';
+  profilePendingImg=null;profileImgRemoved=false;
+  $('#f-profile-name').value=name;
+  // Render big preview
+  const btn=$('#profile-photo-btn');
+  const letter=name.trim()[0]?.toUpperCase()||'M';
+  $('#profile-photo-letter').textContent=letter;
+  renderProfileSheetPhoto(state.profileImg||null);
+  $('#profile-sheet').classList.add('on');
+  $('#profile-bd').classList.add('on');
+  $('#profile-sheet').scrollTop=0;
+  setTimeout(()=>$('#f-profile-name').focus(),350);
+}
+function closeProfileSheet(){$('#profile-sheet').classList.remove('on');$('#profile-bd').classList.remove('on');}
+
+function renderProfileSheetPhoto(src){
+  const btn=$('#profile-photo-btn');
+  const letterEl=$('#profile-photo-letter');
+  if(src){
+    if(letterEl)letterEl.style.display='none';
+    let img=btn.querySelector('img');
+    if(!img){img=document.createElement('img');img.alt='Profiel';btn.insertBefore(img,btn.firstChild);}
+    img.src=src;img.style.display='block';
+  }else{
+    if(letterEl){letterEl.style.display='';letterEl.textContent=($('#f-profile-name').value.trim()[0]||'M').toUpperCase();}
+    const img=btn.querySelector('img');if(img)img.style.display='none';
+  }
+}
+
+function saveProfile(){
+  const name=$('#f-profile-name').value.trim()||'Massi';
+  state.profileName=name;
+  state.profileImg=profileImgRemoved?null:(profilePendingImg||state.profileImg||null);
+  save();renderAvatar();closeProfileSheet();showToast('Profiel opgeslagen ✓');vibrate(15);
+}
+
+function save(){try{localStorage.setItem(LS_KEY,JSON.stringify(state));}catch(e){showToast('Opslag vol — verwijder een foto',false);}}
+function saveBuilds(){try{localStorage.setItem(LS_BUILDS,JSON.stringify(buildsState));}catch(e){showToast('Opslag vol',false);}}
+
+/* ═══════════════════ UTILS ═══════════════════ */
+const $=s=>document.querySelector(s);const $$=s=>document.querySelectorAll(s);
+const fmt=n=>{if(!isFinite(n))return '€0';const s=n<0?'-':'';return s+'€'+Math.round(Math.abs(n)).toLocaleString('nl-NL');};
+const curVal=i=>(i&&(i.now||i.buy))||0;
+const safeNum=v=>{const n=parseFloat(String(v||'0').replace(',','.'));return isFinite(n)?n:0;};
+const escHtml=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const vibrate=ms=>navigator.vibrate&&navigator.vibrate(ms);
+
+let _toastTimer;
+function showToast(msg,ok=true){
+  const t=$('#toast');
+  const color=ok?'var(--up)':'var(--orange)';
+  const path=ok?'<path d="M20 6L9 17l-5-5"/>':'<circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>';
+  t.innerHTML=`<svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:${color};fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round">${path}</svg><span>${escHtml(msg)}</span>`;
+  t.classList.add('on');clearTimeout(_toastTimer);_toastTimer=setTimeout(()=>t.classList.remove('on'),2200);
+}
+function ageStr(ds){
+  if(!ds)return '—';const d=new Date(ds);if(isNaN(d.getTime()))return '—';
+  const m=Math.round((Date.now()-d.getTime())/(1000*60*60*24*30.4));
+  if(m<1)return 'nieuw';if(m<12)return m+' mnd';
+  const y=Math.floor(m/12),r=m%12;return y+'j'+(r?r+'m':'');
+}
+function countTo(el,to,dur=900,pfx=''){
+  if(!el||!isFinite(to))return;const start=performance.now();
+  (function step(t){const p=Math.min(1,(t-start)/dur);const e=1-Math.pow(1-p,3);
+  el.textContent=pfx+Math.round(to*e).toLocaleString('nl-NL');if(p<1)requestAnimationFrame(step);})(start);
+}
+function sparkPath(seed,buy,now){
+  const n=10;let rng=(seed%99991)*9301+49297;const pts=[];const s=buy||50;
+  for(let i=0;i<n;i++){rng=(rng*9301+49297)%233280;pts.push(s+(now-s)*(i/(n-1))+s*(rng/233280-.5)*.15);}
+  const min=Math.min(...pts),max=Math.max(...pts),range=max-min||1;
+  return pts.map((v,i)=>`${i===0?'M':'L'}${(i/(n-1))*60} ${24-((v-min)/range)*22-1}`).join(' ');
+}
+
+function totals(){
+  const active=state.items.filter(i=>i.status!=='sold');
+  const hw=active.reduce((s,i)=>s+curVal(i)*i.units,0);
+  const hb=active.reduce((s,i)=>s+(i.buy||0)*i.units,0);
+  const askT=active.reduce((s,i)=>s+(i.ask||curVal(i))*i.units,0);
+  const u=active.reduce((s,i)=>s+(i.units||1),0);
+  const pnl=hw-hb;
+  const buildsTotal=buildsState.builds.filter(b=>b.status!=='sold').reduce((s,b)=>s+(b.ask||b.buy||0),0);
+  return{hwValue:hw,hwBuy:hb,hwAsk:askT,units:u,pnl,pct:hb?(pnl/hb)*100:0,total:hw+(state.cash||0)+buildsTotal,buildsTotal};
+}
+
+/* ═══════════════════ PROFILE LISTENERS ═══════════════════ */
+$('#f-profile-img').addEventListener('change',async()=>{
+  const file=$('#f-profile-img').files[0];if(!file)return;
+  try{profilePendingImg=await compressImage(file,400);profileImgRemoved=false;renderProfileSheetPhoto(profilePendingImg);}
+  catch(e){showToast('Foto laden mislukt',false);}
+  $('#f-profile-img').value='';
+});
+$('#f-profile-name').addEventListener('input',function(){
+  if(!profilePendingImg&&!state.profileImg){const l=(this.value.trim()[0]||'M').toUpperCase();const el=$('#profile-photo-letter');if(el)el.textContent=l;}
+});
+
+/* ═══════════════════ IMAGE UPLOAD ═══════════════════ */
+let pendingImg=null,imgRemoved=false;
+let buildPendingImg=null,buildImgRemoved=false;
+function compressImage(file,maxH=720){
+  return new Promise((res,rej)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const img=new Image();
+      img.onload=()=>{
+        const MAX=maxH;let w=img.width,h=img.height;
+        if(w>h){if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}}else{if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}}
+        const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);
+        res(c.toDataURL('image/jpeg',.75));
+      };img.onerror=()=>rej(new Error('failed'));img.src=e.target.result;
+    };reader.onerror=()=>rej(new Error('read'));reader.readAsDataURL(file);
+  });
+}
+function renderImgPreview(src){
+  const wrap=$('#img-preview-wrap');
+  if(src){wrap.className='img-preview-box';wrap.removeAttribute('data-action');wrap.innerHTML=`<img class="img-preview" src="${src}"><button class="img-remove" data-action="remove-image">✕</button>`;}
+  else{wrap.className='img-upload-ph';wrap.dataset.action='pick-image';wrap.innerHTML=`<svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span>Tap om foto toe te voegen</span>`;}
+}
+function renderBuildImgPreview(src){
+  const wrap=$('#bs-img-wrap');
+  if(src){wrap.className='build-img-preview-box';wrap.removeAttribute('data-action');wrap.innerHTML=`<img class="build-img-preview" src="${src}"><button class="build-img-remove" data-action="remove-build-image">✕</button>`;}
+  else{wrap.className='build-img-upload-ph';wrap.dataset.action='pick-build-image';wrap.innerHTML=`<div class="img-badge">FOTO</div><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span>Tap om foto toe te voegen</span><span style="font-size:10px;opacity:.6">Een goede foto verhoogt de kans op verkoop</span>`;}
+}
+$('#f-img').addEventListener('change',async()=>{
+  const file=$('#f-img').files[0];if(!file)return;
+  try{pendingImg=await compressImage(file);imgRemoved=false;renderImgPreview(pendingImg);}
+  catch(e){showToast('Foto laden mislukt',false);}
+});
+$('#f-build-img').addEventListener('change',async()=>{
+  const file=$('#f-build-img').files[0];if(!file)return;
+  try{buildPendingImg=await compressImage(file,900);buildImgRemoved=false;renderBuildImgPreview(buildPendingImg);}
+  catch(e){showToast('Foto laden mislukt',false);}
+});
+
+/* ═══════════════════ SWIPE TO REVEAL ═══════════════════ */
+const REVEAL_W=96;
+function initSwipeList(container){
+  let startX,startY,currentRow,currentActions,isSwipe,revealedWrap=null;
+  function getActions(row){return row.closest('.swipe-wrap')?.querySelector('.swipe-actions');}
+  function closeRevealed(){
+    if(!revealedWrap)return;
+    const row=revealedWrap.querySelector('.hold-row');
+    const actions=revealedWrap.querySelector('.swipe-actions');
+    if(row){row.style.transition='';row.style.transform='';}
+    if(actions){actions.style.transition='';actions.style.transform='';actions.classList.remove('revealed');}
+    revealedWrap=null;
+  }
+  container.addEventListener('touchstart',e=>{
+    const row=e.target.closest('.hold-row');if(!row)return;
+    startX=e.touches[0].clientX;startY=e.touches[0].clientY;
+    currentRow=row;currentActions=getActions(row);isSwipe=false;
+  },{passive:true});
+  container.addEventListener('touchmove',e=>{
+    if(!currentRow)return;
+    const dx=e.touches[0].clientX-startX;
+    const dy=e.touches[0].clientY-startY;
+    if(!isSwipe&&Math.abs(dy)>Math.abs(dx)&&Math.abs(dy)>6){currentRow=null;return;}
+    if(Math.abs(dx)>8)isSwipe=true;
+    if(!isSwipe)return;
+    e.preventDefault();
+    const wrap=currentRow.closest('.swipe-wrap');
+    const isRevealed=revealedWrap&&revealedWrap===wrap;
+    if(dx<0){
+      const clamped=Math.max(dx,-REVEAL_W);
+      currentRow.style.transition='none';currentRow.style.transform=`translateX(${clamped}px)`;
+      if(currentActions){currentActions.style.transition='none';const pct=Math.min(100,Math.max(0,100+clamped/REVEAL_W*100));currentActions.style.transform=`translateX(${pct}%)`;}
+    }else if(isRevealed){
+      const offset=Math.min(0,dx-REVEAL_W);
+      currentRow.style.transition='none';currentRow.style.transform=`translateX(${offset}px)`;
+      if(currentActions){currentActions.style.transition='none';const pct=Math.min(100,Math.max(0,100+offset/REVEAL_W*100));currentActions.style.transform=`translateX(${pct}%)`;}
+    }
+  },{passive:false});
+  container.addEventListener('touchend',e=>{
+    if(!currentRow||!isSwipe){currentRow=null;currentActions=null;return;}
+    const dx=e.changedTouches[0].clientX-startX;
+    const wrap=currentRow.closest('.swipe-wrap');
+    currentRow.style.transition='';if(currentActions)currentActions.style.transition='';
+    if(dx<-40){
+      if(revealedWrap&&revealedWrap!==wrap)closeRevealed();
+      currentRow.style.transform=`translateX(-${REVEAL_W}px)`;
+      if(currentActions){currentActions.style.transform='translateX(0)';currentActions.classList.add('revealed');}
+      revealedWrap=wrap;vibrate(10);
+    }else{
+      currentRow.style.transform='';
+      if(currentActions){currentActions.style.transform='';currentActions.classList.remove('revealed');}
+      if(revealedWrap===wrap)revealedWrap=null;
+    }
+    currentRow=null;currentActions=null;
+  });
+  container.addEventListener('click',e=>{
+    if(!revealedWrap)return;
+    if(e.target.closest('.sw-btn'))return;
+    const wrap=e.target.closest('.swipe-wrap');
+    if(wrap===revealedWrap){e.preventDefault();e.stopPropagation();}
+    closeRevealed();
+  });
+}
+// Init swipe on both lists
+initSwipeList($('#hold-list'));
+initSwipeList($('#hw-list'));
+
+/* ═══════════════════ SEARCH & SORT STATE ═══════════════════ */
+let filterCat='ALL',searchQuery='',sortMode='value';
+
+$('#hw-search').addEventListener('input',function(){
+  searchQuery=this.value.toLowerCase().trim();
+  $('#hw-search-clear').classList.toggle('on',searchQuery.length>0);
+  renderHardware();
+});
+
+/* ═══════════════════ RENDERERS ═══════════════════ */
+function renderHome(){
+  renderAvatar();
+  const t=totals();
+  countTo($('#bal-int'),Math.floor(t.total));
+  const de=$('#bal-delta');
+  if(t.hwBuy>0){
+    de.className='bal-delta'+(t.pnl<0?' dn':'');
+    const arrowUp='<path d="M7 17l9-9M7 8h9v9"/>',arrowDn='<path d="M17 7l-9 9M16 16H7V7"/>';
+    de.innerHTML=`<svg viewBox="0 0 24 24" style="width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round">${t.pnl>=0?arrowUp:arrowDn}</svg><span>${(t.pnl>=0?'+':'')+fmt(t.pnl)+' ('+(t.pct>=0?'+':'')+t.pct.toFixed(1)+'%)'}</span>`;
+  }else{
+    de.className='bal-delta neutral';
+    de.innerHTML=`<svg viewBox="0 0 24 24" style="width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round"><path d="M7 17l9-9M7 8h9v9"/></svg><span>Voeg items toe om te beginnen</span>`;
+  }
+  countTo($('#pill-hw'),t.hwValue,800,'€');
+  if($('#pill-builds'))countTo($('#pill-builds'),t.buildsTotal||0,850,'€');
+  countTo($('#pill-cash'),state.cash||0,700,'€');
+  const aA=state.items.filter(i=>i.status!=='sold').length;
+  const aB=buildsState.builds.filter(b=>b.status!=='sold').length;
+  $('#pill-hw-n').textContent=aA;
+  if($('#pill-builds-n'))$('#pill-builds-n').textContent=aB;
+
+  // Favourites
+  const favs=state.items.filter(i=>i.fav&&i.status!=='sold').slice(0,4);
+  const fr=$('#fav-scroll'),dotsEl=$('#fav-dots');
+  if(!favs.length){
+    fr.innerHTML='<div style="color:var(--ink-3);font-size:12px;padding:14px 0">Nog geen favorieten — swipe links op een item</div>';
+    dotsEl.innerHTML='';
+  }else{
+    fr.innerHTML=favs.map(i=>{
+      const cur=curVal(i),pnl=(cur-i.buy)*i.units,pct=i.buy?(cur/i.buy-1)*100:0;
+      return `<button class="fav-card" data-action="open-detail" data-id="${i.id}" data-from="home">
+        ${i.img?`<img src="${i.img}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.11;border-radius:18px;pointer-events:none" loading="lazy" alt="">`:``}
+        <svg class="fav-spark" viewBox="0 0 60 24" preserveAspectRatio="none"><path d="${sparkPath(i.id,i.buy,cur)}" fill="none" stroke="${pnl>=0?'var(--up)':'var(--down)'}" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <div class="fav-head"><div class="fav-ic">${CAT_ICONS[i.cat]||CAT_ICONS.GPU}</div><div class="fav-tag">${escHtml(i.cat.slice(0,3))}</div></div>
+        <div class="fav-name">${escHtml(i.name)}</div>
+        <div class="fav-cat">${i.units}× · ${ageStr(i.date)}</div>
+        <div class="fav-val">${fmt(cur*i.units)}</div>
+        <div class="fav-chg ${pct<0?'dn':''}">${pct>=0?'+':''}${pct.toFixed(1)}%</div>
+      </button>`;
+    }).join('');
+    if(favs.length>1){
+      dotsEl.innerHTML=favs.map((_,i)=>`<div class="fav-dot${i===0?' on':''}"></div>`).join('');
+      fr._dotsHandler&&fr.removeEventListener('scroll',fr._dotsHandler);
+      fr._dotsHandler=()=>{
+        const cards=fr.querySelectorAll('.fav-card');if(!cards.length)return;
+        const cardW=cards[0].offsetWidth+10;
+        const active=Math.min(Math.round(fr.scrollLeft/cardW),cards.length-1);
+        dotsEl.querySelectorAll('.fav-dot').forEach((d,i)=>d.classList.toggle('on',i===active));
+      };
+      fr.addEventListener('scroll',fr._dotsHandler,{passive:true});
+    }else{dotsEl.innerHTML='';}
+  }
+
+  // Holdings top 5
+  const top=[...state.items.filter(i=>i.status!=='sold')].sort((a,b)=>curVal(b)*b.units-curVal(a)*a.units).slice(0,5);
+  if(!top.length){
+    $('#hold-list').innerHTML=`<div class="empty-block">
+      <div class="empty-illo"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="1"/><path d="M8 21h8M12 17v4"/></svg></div>
+      <h3>Portfolio leeg</h3>
+      <p>Voeg je eerste GPU, CPU of andere hardware toe en begin met tracken.</p>
+      <button class="empty-cta" data-action="add">+ Eerste asset toevoegen</button>
+    </div>`;
+  }else{
+    $('#hold-list').innerHTML=top.map(i=>{
+      const cur=curVal(i),pct=i.buy?(cur/i.buy-1)*100:0;
+      return `<div class="swipe-wrap">
+        <button class="hold-row" data-action="open-detail" data-id="${i.id}" data-from="home">
+          <div class="hold-ic">${i.img?`<img src="${i.img}" alt="" loading="lazy">`:(CAT_ICONS[i.cat]||CAT_ICONS.GPU)}</div>
+          <div class="hold-mid"><div class="hold-name">${escHtml(i.name)}</div><div class="hold-meta">${escHtml(i.cat)} · ${i.units}× · ${STATUS_LABELS[i.status]||'In bezit'}</div></div>
+          <div class="hold-right"><div class="hold-val">${fmt(cur*i.units)}</div><div class="hold-chg ${pct<0?'dn':''}">${pct>=0?'+':''}${pct.toFixed(1)}%</div></div>
+        </button>
+        <div class="swipe-actions">
+          <button class="sw-btn sw-fav ${i.fav?'on':''}" data-action="swipe-fav" data-id="${i.id}"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><span>${i.fav?'★':'♥'}</span></button>
+          <button class="sw-btn sw-sell ${i.status==='sold'?'on':''}" data-action="swipe-sell" data-id="${i.id}"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span>${i.status==='sold'?'↩':'✓'}</span></button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+}
+
+function renderHardware(){
+  const t=totals();
+  countTo($('#hw-total'),t.hwValue);
+  $('#hw-bought').textContent=fmt(t.hwBuy);
+  const pnlEl=$('#hw-pot');pnlEl.textContent=(t.pnl>=0?'+':'')+fmt(t.pnl);pnlEl.style.color=t.pnl<0?'var(--down)':'var(--up)';
+
+  // Sort chips
+  $('#sort-bar').innerHTML=SORT_MODES.map(m=>`<button class="sort-chip ${m===sortMode?'on':''}" data-action="set-sort" data-sort="${m}">${SORT_LABELS[m]}</button>`).join('');
+
+  // Cat chips
+  const cats=['ALL',...new Set(state.items.filter(i=>i.status!=='sold').map(i=>i.cat))];
+  $('#cat-filter-row').innerHTML=cats.map(c=>`<button class="cat-chip ${c===filterCat?'on':''}" data-action="set-cat" data-cat="${escHtml(c)}">${c==='ALL'?'Alle':escHtml(c)}</button>`).join('');
+
+  let items=state.items.filter(i=>i.status!=='sold');
+  if(filterCat!=='ALL')items=items.filter(i=>i.cat===filterCat);
+  if(searchQuery)items=items.filter(i=>i.name.toLowerCase().includes(searchQuery)||i.cat.toLowerCase().includes(searchQuery)||(i.note||'').toLowerCase().includes(searchQuery));
+
+  // Sort
+  items=[...items].sort((a,b)=>{
+    if(sortMode==='value')return curVal(b)*b.units-curVal(a)*a.units;
+    if(sortMode==='pnl')return (curVal(b)-b.buy)*b.units-(curVal(a)-a.buy)*a.units;
+    if(sortMode==='date')return new Date(b.date||0)-new Date(a.date||0);
+    if(sortMode==='name')return (a.name||'').localeCompare(b.name||'','nl');
+    return 0;
+  });
+
+  $('#list-count').textContent=items.length+' items'+(searchQuery?' voor "'+searchQuery+'"':'');
+  $('#list-title').textContent=filterCat==='ALL'?'Alle items':filterCat;
+
+  if(!items.length){
+    $('#hw-list').innerHTML=`<div class="empty-block">
+      <div class="empty-illo"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></div>
+      <h3>${searchQuery?'Niks gevonden':'Geen items'}</h3>
+      <p>${searchQuery?'"'+escHtml(searchQuery)+'" komt niet overeen met assets in je portfolio.':(filterCat==='ALL'?'Voeg je eerste asset toe.':'Geen '+escHtml(filterCat)+' gevonden.')}</p>
+      ${searchQuery?`<button class="empty-cta" data-action="clear-search">✕ Zoekopdracht wissen</button>`:`<button class="empty-cta" data-action="add">+ Toevoegen</button>`}
+    </div>`;
+    return;
+  }
+  $('#hw-list').innerHTML=items.map(i=>{
+    const cur=curVal(i),pct=i.buy?(cur/i.buy-1)*100:0;
+    return `<div class="swipe-wrap">
+      <button class="hold-row" data-action="open-detail" data-id="${i.id}" data-from="hardware">
+        <div class="hold-ic">${i.img?`<img src="${i.img}" alt="" loading="lazy">`:(CAT_ICONS[i.cat]||CAT_ICONS.GPU)}</div>
+        <div class="hold-mid"><div class="hold-name">${escHtml(i.name)}</div><div class="hold-meta">${escHtml(i.cat)} · ${i.units}× · ${ageStr(i.date)}</div></div>
+        <div class="hold-right"><div class="hold-val">${fmt(cur*i.units)}</div><div class="hold-chg ${pct<0?'dn':''}">${pct>=0?'+':''}${pct.toFixed(1)}%</div></div>
+      </button>
+      <div class="swipe-actions">
+        <button class="sw-btn sw-fav ${i.fav?'on':''}" data-action="swipe-fav" data-id="${i.id}"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><span>${i.fav?'★':'♥'}</span></button>
+        <button class="sw-btn sw-sell ${i.status==='sold'?'on':''}" data-action="swipe-sell" data-id="${i.id}"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span>${i.status==='sold'?'↩':'✓'}</span></button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+let detailId=null,detailFrom='hardware';
+function renderDetail(){
+  const i=state.items.find(x=>x.id===detailId);if(!i){goto(detailFrom);return;}
+  const cur=curVal(i),ask=i.ask||0,pnl=(cur-(i.buy||0))*i.units,pct=i.buy?(cur/i.buy-1)*100:0;
+  const img=$('#dt-hero-img');
+  if(i.img){img.src=i.img;img.classList.add('on');}else{img.src='';img.classList.remove('on');}
+  const badge=$('#dt-status-badge');badge.textContent=STATUS_LABELS[i.status]||'In bezit';badge.className='dt-status-badge '+(STATUS_CSS[i.status]||'s-hold');
+  $('#dt-cat').textContent=i.cat;$('#dt-name').textContent=i.name;
+  countTo($('#dt-price'),Math.round(cur*i.units));
+  const pe=$('#dt-pnl');pe.classList.toggle('dn',pnl<0);pe.textContent=(pnl>=0?'+':'')+fmt(pnl)+' ('+(pct>=0?'+':'')+pct.toFixed(1)+'%)';
+  $('#m-buy').textContent=Math.round(i.buy||0).toLocaleString('nl-NL');
+  $('#m-buy-date').textContent=i.date||'—';
+  $('#m-now').textContent=Math.round(cur).toLocaleString('nl-NL');
+  $('#m-age').textContent=ageStr(i.date);
+  const diff=cur-(i.buy||0);
+  $('#m-dep').textContent=(diff>=0?'+':'')+fmt(diff);$('#m-dep-eur').textContent=(diff>=0?'winst':'verlies')+' per stuk';
+  if(ask>0){$('#m-target').textContent='€'+Math.round(ask).toLocaleString('nl-NL');const toAsk=cur?(ask-cur)/cur*100:0;$('#m-margin').textContent=cur<ask?'+'+toAsk.toFixed(1)+'% boven markt':'Op of onder markt';}
+  else{$('#m-target').textContent='Niet ingesteld';$('#m-margin').textContent='Geen vraagprijs';}
+  const rows=[['Categorie',escHtml(i.cat)],['Status',STATUS_LABELS[i.status]||'—'],['Units',i.units+'×'],['Stuksprijs (nu)',fmt(cur)],['Vraagprijs',ask?fmt(ask):'Niet ingesteld'],['Aankoopwaarde',fmt(i.buy||0)],['Totale inkoop',fmt((i.buy||0)*i.units)],['Aankoopdatum',i.date||'—'],...(i.note?[['Notitie',escHtml(i.note)]]:[])] ;
+  $('#specs-list').innerHTML=rows.map(([k,v])=>`<div class="spec-row"><div class="spec-k">${k}</div><div class="spec-v">${v}</div></div>`).join('');
+  const fi=$('#fav-icon');fi.style.fill=i.fav?'var(--orange)':'none';fi.setAttribute('stroke',i.fav?'var(--orange)':'var(--ink-1)');
+  $('#sell-btn-txt').textContent=i.status==='sold'?'Terugzetten':'Markeer verkocht';
+  // Reset delete button
+  const dBtn=$('#delete-asset-btn');dBtn.classList.remove('confirming');dBtn.dataset.confirming='';clearTimeout(dBtn._timer);
+  $('#delete-asset-txt').textContent='Verwijder item';
+  drawGraph(i);
+}
+
+function drawGraph(item){
+  // Try to build real data from dates
+  const now=new Date();
+  const months=item.date?Math.max(1,Math.round((now-new Date(item.date))/(1000*60*60*24*30.4))):6;
+  const n=Math.max(8,Math.min(24,months*2));
+  const buy=item.buy||curVal(item);const cur=curVal(item);
+  let isReal=false;
+
+  // If item has a date, build a real progression
+  let pts=[];
+  if(item.date&&months>=1){
+    isReal=true;
+    // Build a monotonic-ish progression from buy to now with slight noise
+    for(let k=0;k<n;k++){
+      const prog=k/(n-1);
+      // Use a consistent hash for noise per item+point
+      let h=((item.id*397+k*2311)&0xffff)/0xffff;
+      pts.push(Math.max(1,buy+(cur-buy)*prog+Math.max(buy,1)*(h-.5)*.06));
+    }
+    pts[0]=buy;pts[n-1]=cur;
+  }else{
+    let rng=(item.id%99991)*7919+1234;
+    for(let k=0;k<n;k++){rng=(rng*1103515245+12345)&0x7fffffff;pts.push(Math.max(1,buy+(cur-buy)*(k/(n-1))+Math.max(buy,1)*(rng/0x7fffffff-.5)*.08));}
+    pts[0]=buy;pts[n-1]=cur;
+  }
+
+  const badge=$('#graph-data-badge');
+  badge.innerHTML=isReal
+    ?`<span class="real-data-badge"><svg viewBox="0 0 24 24" style="width:10px;height:10px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round"><path d="M20 6L9 17l-5-5"/></svg> Echte data</span>`
+    :`<span class="fake-data-badge">Indicatief (geen datum)</span>`;
+
+  const min=Math.min(...pts)*.95,max=Math.max(...pts)*1.05;
+  const W=320,H=150,pad=8;
+  const x=k=>pad+(k/(n-1))*(W-pad*2);const y=v=>pad+(max===min?.5:(1-(v-min)/(max-min)))*(H-pad*2);
+  let d='M'+x(0)+' '+y(pts[0]);
+  for(let k=1;k<n;k++){const cx=(x(k-1)+x(k))/2;d+=` Q${cx} ${y(pts[k-1])} ${cx} ${(y(pts[k-1])+y(pts[k]))/2} T${x(k)} ${y(pts[k])}`;}
+  const line=$('#graph-line'),fill=$('#graph-fill'),dot=$('#graph-dot');
+  line.setAttribute('d',d);fill.setAttribute('d',d+` L${x(n-1)} ${H} L${x(0)} ${H} Z`);
+  dot.setAttribute('cx',x(n-1));dot.setAttribute('cy',y(pts[n-1]));
+  requestAnimationFrame(()=>{
+    const len=(line.getTotalLength()||1000)+2;
+    line.style.strokeDasharray=len;line.style.strokeDashoffset=len;line.style.transition='none';
+    fill.style.animation='none';fill.style.opacity='0';dot.style.animation='none';dot.style.opacity='0';
+    requestAnimationFrame(()=>{
+      line.style.transition='stroke-dashoffset 1.3s .15s cubic-bezier(0.22,1,0.36,1)';
+      line.style.strokeDashoffset='0';fill.style.animation='fadeG 1s .7s forwards';dot.style.animation='fadeG .4s 1.2s forwards';
+    });
+  });
+  const grid=$('#graph-grid');grid.innerHTML='';
+  for(let g=1;g<4;g++){const yy=pad+(g/4)*(H-pad*2);grid.innerHTML+=`<line x1="${pad}" x2="${W-pad}" y1="${yy}" y2="${yy}" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>`;}
+}
+
+function renderAnalytics(){
+  const t=totals();
+  const activeItems=state.items.filter(i=>i.status!=='sold');
+  const activeBuilds=buildsState.builds.filter(b=>b.status!=='sold');
+  const buildsVal=activeBuilds.reduce((s,b)=>s+(b.ask||b.buy||0),0);
+
+  if(!activeItems.length&&!activeBuilds.length){
+    $('#donut-segs').innerHTML='';
+    $('#donut-legend').innerHTML='<div style="color:var(--ink-3);font-size:12px">Voeg items of builds toe.</div>';
+    $('#donut-total').textContent='0';$('#trend-val').textContent='€0';$('#trend-pct').textContent='+0%';$('#bars').innerHTML='';
+    $('#ins1-sub').textContent='—';$('#ins2-sub').textContent='—';$('#ins3-sub').textContent='—';return;
+  }
+
+  const byCat={};
+  activeItems.forEach(i=>{byCat[i.cat]=(byCat[i.cat]||0)+curVal(i)*i.units;});
+  if(buildsVal>0)byCat['PC Builds']=(byCat['PC Builds']||0)+buildsVal;
+  const grandTotal=Object.values(byCat).reduce((a,b)=>a+b,0)||1;
+  const entries=Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+  countTo($('#donut-total'),grandTotal);
+  const Ci=2*Math.PI*66;let off=0;
+  $('#donut-segs').innerHTML=entries.map(([c,v],idx)=>{
+    const len=(v/grandTotal)*Ci;const color=CAT_COLORS[c]||'#888';
+    const seg=`<circle cx="80" cy="80" r="66" stroke="${color}" stroke-dasharray="0 ${Ci}" stroke-dashoffset="${-off}"><animate attributeName="stroke-dasharray" from="0 ${Ci}" to="${Math.max(0,len-3)} ${Ci}" dur="0.9s" begin="${0.1+idx*0.07}s" fill="freeze" calcMode="spline" keySplines="0.22 1 0.36 1"/></circle>`;
+    off+=len;return seg;
+  }).join('');
+  $('#donut-legend').innerHTML=entries.slice(0,6).map(([c,v])=>
+    `<div class="leg-row"><div class="leg-dot" style="background:${CAT_COLORS[c]||'#888'}"></div><div class="leg-name">${escHtml(c)}</div><div class="leg-val">${fmt(v)} · ${((v/grandTotal)*100).toFixed(0)}%</div></div>`
+  ).join('');
+
+  // ── Real trend: start from first item date, grow month by month ──
+  const now=new Date();
+  const nowY=now.getFullYear(),nowM=now.getMonth();
+
+  // Find earliest date across all items + builds
+  const allDates=[
+    ...state.items.filter(i=>i.date).map(i=>new Date(i.date)),
+    ...buildsState.builds.filter(b=>b.date).map(b=>new Date(b.date))
+  ].filter(d=>!isNaN(d.getTime()));
+
+  let startY=nowY,startM=nowM;
+  if(allDates.length){
+    const earliest=new Date(Math.min(...allDates));
+    startY=earliest.getFullYear();startM=earliest.getMonth();
+  }
+
+  // Build list of months from start to now (cap at 12)
+  const monthList=[];
+  let y=startY,m=startM;
+  while(y<nowY||(y===nowY&&m<=nowM)){
+    monthList.push({y,m});
+    m++;if(m>11){m=0;y++;}
+  }
+  // Limit to last 12 months max for readability
+  if(monthList.length>12)monthList.splice(0,monthList.length-12);
+
+  const mos=monthList.map(({m})=>MONTH_NL[m]);
+  const isCurrentMonth=({y,m})=>y===nowY&&m===nowM;
+
+  // For each month: sum buy price of items acquired up to end of that month
+  // For the current month: use curVal (live market value)
+  const barVals=monthList.map(({y,m})=>{
+    const endOfMonth=new Date(y,m+1,0,23,59,59); // last ms of month
+    const isCurrent=y===nowY&&m===nowM;
+    // Assets
+    const hwVal=state.items
+      .filter(i=>i.status!=='sold')
+      .filter(i=>{
+        if(!i.date)return isCurrent; // undated items only count in current month
+        return new Date(i.date)<=endOfMonth;
+      })
+      .reduce((s,i)=>s+(isCurrent?curVal(i):(i.buy||curVal(i)))*i.units,0);
+    // Builds
+    const bVal=buildsState.builds
+      .filter(b=>b.status!=='sold')
+      .filter(b=>{
+        if(!b.date)return isCurrent;
+        return new Date(b.date)<=endOfMonth;
+      })
+      .reduce((s,b)=>s+(b.ask||b.buy||0),0);
+    return hwVal+bVal;
+  });
+
+  // Always real if any items have dates, else show current value only in last bar
+  const hasRealData=allDates.length>0;
+  const isRealTrend=hasRealData;
+
+  const maxB=Math.max(...barVals,1);
+  const currentTotal=t.hwValue+buildsVal;
+  countTo($('#trend-val'),currentTotal,1100,'€');
+
+  // % change: first bar vs last bar
+  const firstNonZero=barVals.find(v=>v>0)||0;
+  const trendPct=firstNonZero?((barVals[barVals.length-1]-firstNonZero)/firstNonZero)*100:0;
+  const tp=$('#trend-pct');tp.classList.toggle('dn',trendPct<0);tp.textContent=(trendPct>=0?'+':'')+trendPct.toFixed(1)+'%';
+
+  const spanTxt=monthList.length===1?MONTH_NL[monthList[0].m]+' '+monthList[0].y:MONTH_NL[monthList[0].m]+' – '+MONTH_NL[monthList[monthList.length-1].m];
+  $('#trend-lbl').textContent=isRealTrend?'Echte data · '+spanTxt:'Voeg aankoopdatums toe voor echte trend';
+
+  $('#bars').innerHTML=mos.map((mo,idx)=>{
+    const isCur=isCurrentMonth(monthList[idx]);
+    return `<div class="bar-col"><div class="bar${isCur?' real':''}${barVals[idx]===0?' zero':''}" style="height:0" title="${mo}: ${fmt(barVals[idx])}"></div><div class="bar-lbl">${mo}</div></div>`;
+  }).join('');
+  requestAnimationFrame(()=>$$('.bar').forEach((b,i)=>b.style.height=((barVals[i]/maxB)*84)+'px'));
+
+  const best=activeItems.filter(i=>i.buy>0).sort((a,b)=>(curVal(b)/b.buy)-(curVal(a)/a.buy))[0];
+  const holdCount=state.items.filter(i=>['hold','listed'].includes(i.status)).length;
+  $('#ins1-sub').textContent=t.pnl>=0?'Portfolio +'+fmt(t.pnl)+' vs inkoop ('+t.pct.toFixed(1)+'%)'+(buildsVal>0?' · '+activeBuilds.length+' actieve builds':''):'Portfolio '+fmt(t.pnl)+' onder aanschafprijs';
+  $('#ins2-sub').textContent=holdCount+' assets actief.'+(activeBuilds.length?' '+activeBuilds.length+' builds. Vraagwaarde: '+fmt(t.hwAsk+buildsVal)+'.':' Vraagwaarde: '+fmt(t.hwAsk)+'.');
+  if(best){const bp=(curVal(best)/best.buy-1)*100;$('#ins3-sub').textContent=best.name+' · '+(bp>=0?'+':'')+bp.toFixed(1)+'% · vraagprijs: '+fmt(best.ask||curVal(best));}
+  else if(activeBuilds.length){const tb=activeBuilds.sort((a,b)=>(b.ask||0)-(a.ask||0))[0];$('#ins3-sub').textContent=tb.title+' · vraagprijs: '+fmt(tb.ask||0);}
+  else{$('#ins3-sub').textContent='Voeg aankoopprijzen toe om de top performer te zien.';}
+}
+
+let profileFilter='ALL';
+let buildDetailId=null;
+function renderProfile(){
+  const builds=buildsState.builds;
+  const active=builds.filter(b=>b.status!=='sold');
+  const totalBuy=active.reduce((s,b)=>s+(b.buy||0),0);
+  const totalAsk=active.reduce((s,b)=>s+(b.ask||0),0);
+  const totalProfit=totalAsk-totalBuy;
+  $('#builds-summary').innerHTML=`
+    <div class="bsum-pill"><div class="bsum-lbl">Builds</div><div class="bsum-val">${builds.length}</div></div>
+    <div class="bsum-pill"><div class="bsum-lbl">Vraagprijs</div><div class="bsum-val">${fmt(totalAsk)}</div></div>
+    <div class="bsum-pill"><div class="bsum-lbl">Potentieel</div><div class="bsum-val ${totalProfit>=0?'up':'dn'}">${totalProfit>=0?'+':''}${fmt(totalProfit)}</div></div>`;
+  const sc={};builds.forEach(b=>{sc[b.status]=(sc[b.status]||0)+1;});
+  const allF=['ALL',...STATUSES.filter(s=>sc[s])];
+  $('#status-filter-row').innerHTML=allF.map(s=>`<button class="status-chip ${s===profileFilter?'on':''}" data-action="set-status-filter" data-status="${s}">${s==='ALL'?'Alle ('+builds.length+')':STATUS_LABELS[s]+' ('+(sc[s]||0)+')'}</button>`).join('');
+  const SORT_ORD={listed:0,building:1,sourcing:2,hold:3,sold:4};
+  const items=builds.filter(b=>profileFilter==='ALL'||b.status===profileFilter).sort((a,b)=>(SORT_ORD[a.status]||5)-(SORT_ORD[b.status]||5)||b.ask-a.ask);
+  if(!items.length){
+    $('#build-grid').innerHTML=`<div class="empty-block">
+      <div class="empty-illo"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="1"/><path d="M8 21h8M12 17v4"/></svg></div>
+      <h3>Geen builds</h3>
+      <p>Maak je eerste complete-pc advertentie. Foto, titel, specs — klaar voor Marktplaats.</p>
+      <button class="empty-cta" data-action="add-build">+ Nieuwe build</button>
+    </div>`;
+    return;
+  }
+  $('#build-grid').innerHTML=items.map(b=>{
+    const profit=(b.ask||0)-(b.buy||0);
+    return `<button class="build-mp-card" data-action="open-build-detail" data-id="${b.id}">
+      <div class="bmp-photo">
+        ${b.img?`<img src="${b.img}" alt="${escHtml(b.title)}" loading="lazy">`:`<div class="bmp-photo-ph"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="1"/><path d="M8 21h8M12 17v4"/></svg></div>`}
+        <div class="bmp-status-badge ${STATUS_CSS[b.status]||'s-hold'}">${STATUS_LABELS[b.status]||'—'}</div>
+      </div>
+      <div class="bmp-body">
+        <div class="bmp-title">${escHtml(b.title||'Naamloos')}</div>
+        <div class="bmp-price">${fmt(b.ask||0)}<span class="bmp-price-sub">${b.buy?'· inkoop '+fmt(b.buy):''}</span></div>
+        <div class="bmp-badges">
+          ${b.gpu?`<span class="bmp-badge gpu">GPU: ${escHtml(b.gpu.length>16?b.gpu.slice(0,14)+'…':b.gpu)}</span>`:''}
+          ${b.cpu?`<span class="bmp-badge cpu">CPU: ${escHtml(b.cpu.length>16?b.cpu.slice(0,14)+'…':b.cpu)}</span>`:''}
+          ${b.ram?`<span class="bmp-badge">${escHtml(b.ram.length>14?b.ram.slice(0,12)+'…':b.ram)}</span>`:''}
+        </div>
+        <div class="bmp-date">${b.date?ageStr(b.date)+' geleden':'—'}</div>
+      </div>
+    </button>`;
+  }).join('');
+}
+
+function renderBuildDetail(){
+  const b=buildsState.builds.find(x=>x.id===buildDetailId);if(!b){goto('profile');return;}
+  const wrap=$('#bd-hero-wrap');
+  const pnlAmt=(b.ask||0)-(b.buy||0);
+  const pnlHtml=b.buy?`<div class="bd-pnl ${pnlAmt<0?'dn':''}">${pnlAmt>=0?'+':''}${fmt(pnlAmt)} marge</div>`:'';
+  if(b.img){wrap.innerHTML=`<img src="${b.img}" alt="${escHtml(b.title)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block"><div class="bd-price-banner"><div class="bd-price">${fmt(b.ask||0)}</div>${pnlHtml}</div>`;}
+  else{wrap.innerHTML=`<div class="bd-hero-ph"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="1"/><path d="M8 21h8M12 17v4"/></svg></div><div class="bd-price-banner"><div class="bd-price">${fmt(b.ask||0)}</div>${pnlHtml}</div>`;}
+  $('#bd-name').textContent=b.title||'Naamloos';
+  $('#bd-status-area').innerHTML=`<span class="dt-status-badge ${STATUS_CSS[b.status]||'s-hold'}">${STATUS_LABELS[b.status]||'—'}</span>`;
+  $('#bd-meta').textContent=[b.date?'Aangemaakt: '+b.date:null,b.note?b.note:null].filter(Boolean).join(' · ')||'—';
+  $('#bd-m-buy').textContent=Math.round(b.buy||0).toLocaleString('nl-NL');
+  const profit=(b.ask||0)-(b.buy||0);
+  const pm=$('#bd-m-profit');pm.textContent=(profit>=0?'+':'')+fmt(profit);pm.style.color=profit<0?'var(--down)':'var(--up)';
+  $('#bd-sell-txt').textContent=b.status==='sold'?'Terugzetten':'Markeer verkocht';
+  const specFields=[['GPU',b.gpu],['CPU',b.cpu],['RAM',b.ram],['Opslag',b.ssd],['Moederbord',b.mobo]].filter(([,v])=>v);
+  if(!specFields.length){$('#bd-specs-list').innerHTML='<div style="font-size:12px;color:var(--ink-3)">Geen specs ingevuld.</div>';return;}
+  $('#bd-specs-list').innerHTML=specFields.map(([k,v])=>`<div class="spec-row"><div class="spec-k">${k}</div><div class="spec-v">${escHtml(v)}</div></div>`).join('');
+  // Reset delete btn
+  const dBtn=$('#delete-build-btn');dBtn.classList.remove('confirming');dBtn.dataset.confirming='';clearTimeout(dBtn._timer);
+  $('#delete-build-txt').textContent='Verwijder build';
+}
+
+/* ═══════════════════ SHEET – ASSETS ═══════════════════ */
+let editingId=null,selCat='GPU',selStatus='listed';
+function renderCatPills(){$('#cat-pills').innerHTML=CATS.map(c=>`<button class="cat-pill ${c===selCat?'on':''}" data-action="pick-cat" data-cat="${escHtml(c)}">${escHtml(c)}</button>`).join('');}
+function renderStatusPills(){$('#status-pills').innerHTML=STATUSES.map(s=>`<button class="cat-pill status-pill-${s} ${s===selStatus?'on':''}" data-action="pick-status" data-status="${s}">${STATUS_LABELS[s]}</button>`).join('');}
+
+function openAdd(){
+  editingId=null;selCat='GPU';selStatus='listed';pendingImg=null;imgRemoved=false;
+  $('#sheet-ttl').textContent='Nieuwe positie';$('#sheet-sub').textContent='Hardware-asset toevoegen';
+  $('#save-btn').textContent='Toevoegen aan portfolio';$('#del-btn').style.display='none';
+  ['f-name','f-buy','f-now','f-ask','f-note'].forEach(id=>$(('#'+id)).value='');
+  $('#f-units').value=1;$('#f-date').value=new Date().toISOString().slice(0,10);$('#f-img').value='';
+  renderImgPreview(null);renderCatPills();renderStatusPills();
+  $('#ac-dd').classList.remove('on');$('#sheet').classList.add('on');$('#sheet-bd').classList.add('on');$('#sheet').scrollTop=0;
+}
+function openEdit(i){
+  editingId=i.id;selCat=i.cat;selStatus=i.status||'hold';pendingImg=null;imgRemoved=false;
+  $('#sheet-ttl').textContent='Wijzig positie';$('#sheet-sub').textContent=i.name;
+  $('#save-btn').textContent='Opslaan';$('#del-btn').style.display='block';
+  $('#f-name').value=i.name||'';$('#f-buy').value=i.buy||'';$('#f-now').value=i.now||'';
+  $('#f-ask').value=i.ask||'';$('#f-units').value=i.units||1;$('#f-date').value=i.date||'';$('#f-note').value=i.note||'';$('#f-img').value='';
+  renderImgPreview(i.img||null);renderCatPills();renderStatusPills();
+  $('#ac-dd').classList.remove('on');$('#sheet').classList.add('on');$('#sheet-bd').classList.add('on');$('#sheet').scrollTop=0;
+}
+function closeSheet(){$('#sheet').classList.remove('on');$('#sheet-bd').classList.remove('on');$('#ac-dd').classList.remove('on');}
+
+function acType(){
+  const q=$('#f-name').value.toLowerCase().trim();const pool=SUGG[selCat]||[];
+  const m=(q?pool.filter(s=>s.toLowerCase().includes(q)):pool).slice(0,6);
+  const dd=$('#ac-dd');
+  if(!m.length){dd.classList.remove('on');return;}
+  dd.innerHTML=m.map(v=>`<div class="ac-item" data-action="pick-suggest" data-val="${escHtml(v)}">${escHtml(v)}</div>`).join('');
+  dd.classList.add('on');
+}
+$('#f-name').addEventListener('input',acType);$('#f-name').addEventListener('focus',acType);
+document.addEventListener('click',e=>{if(!e.target.closest('#f-name')&&!e.target.closest('#ac-dd'))$('#ac-dd').classList.remove('on');});
+
+function saveItem(){
+  const name=$('#f-name').value.trim();if(!name){showToast('Geef een modelnaam op',false);$('#f-name').focus();return;}
+  const buy=safeNum($('#f-buy').value),now=safeNum($('#f-now').value),ask=safeNum($('#f-ask').value);
+  const units=Math.max(1,parseInt($('#f-units').value,10)||1);const date=$('#f-date').value||'';const note=$('#f-note').value.trim();
+  const existingImg=editingId?(state.items.find(x=>x.id===editingId)?.img??null):null;
+  const img=imgRemoved?null:(pendingImg||existingImg);
+  if(editingId){const item=state.items.find(x=>x.id===editingId);if(item)Object.assign(item,{cat:selCat,name,buy,now:now||buy,ask:ask||now||buy,units,date,note,status:selStatus,img});}
+  else{state.items.push({id:Date.now(),cat:selCat,name,buy,now:now||buy,ask:ask||now||buy,units,date,note,status:selStatus,fav:false,img});}
+  save();closeSheet();showToast(editingId?'Bijgewerkt ✓':'Toegevoegd ✓');vibrate(15);reRenderCurrent();
+}
+
+/* ═══════════════════ SHEET – BUILDS ═══════════════════ */
+let editingBuildId=null;
+function openAddBuild(){
+  editingBuildId=null;buildPendingImg=null;buildImgRemoved=false;
+  $('#bs-ttl').textContent='Nieuwe build';$('#bs-sub').textContent='Complete pc advertentie plaatsen';
+  $('#bs-save-btn').textContent='Build toevoegen';$('#bs-del-btn').style.display='none';
+  ['bs-title','bs-gpu','bs-cpu','bs-ram','bs-ssd','bs-mobo','bs-note'].forEach(id=>$(('#'+id)).value='');
+  $('#bs-ask').value='';$('#bs-buy').value='';$('#bs-date').value=new Date().toISOString().slice(0,10);$('#bs-status').value='listed';
+  $('#f-build-img').value='';renderBuildImgPreview(null);
+  $('#build-sheet').classList.add('on');$('#build-sheet-bd').classList.add('on');$('#build-sheet').scrollTop=0;
+}
+function openEditBuild(b){
+  editingBuildId=b.id;buildPendingImg=null;buildImgRemoved=false;
+  $('#bs-ttl').textContent='Wijzig build';$('#bs-sub').textContent=b.title||'Build bewerken';
+  $('#bs-save-btn').textContent='Opslaan';$('#bs-del-btn').style.display='block';
+  $('#bs-title').value=b.title||'';$('#bs-ask').value=b.ask||'';$('#bs-buy').value=b.buy||'';
+  $('#bs-gpu').value=b.gpu||'';$('#bs-cpu').value=b.cpu||'';$('#bs-ram').value=b.ram||'';
+  $('#bs-ssd').value=b.ssd||'';$('#bs-mobo').value=b.mobo||'';
+  $('#bs-date').value=b.date||'';$('#bs-status').value=b.status||'listed';$('#bs-note').value=b.note||'';
+  $('#f-build-img').value='';renderBuildImgPreview(b.img||null);
+  $('#build-sheet').classList.add('on');$('#build-sheet-bd').classList.add('on');$('#build-sheet').scrollTop=0;
+}
+function closeBuildSheet(){$('#build-sheet').classList.remove('on');$('#build-sheet-bd').classList.remove('on');}
+
+function saveBuild(){
+  const title=$('#bs-title').value.trim();if(!title){showToast('Geef een titel op',false);$('#bs-title').focus();return;}
+  const ask=safeNum($('#bs-ask').value),buy=safeNum($('#bs-buy').value);
+  const gpu=$('#bs-gpu').value.trim(),cpu=$('#bs-cpu').value.trim(),ram=$('#bs-ram').value.trim(),ssd=$('#bs-ssd').value.trim(),mobo=$('#bs-mobo').value.trim();
+  const date=$('#bs-date').value||'',status=$('#bs-status').value||'listed',note=$('#bs-note').value.trim();
+  const existingImg=editingBuildId?(buildsState.builds.find(x=>x.id===editingBuildId)?.img??null):null;
+  const img=buildImgRemoved?null:(buildPendingImg||existingImg);
+  if(editingBuildId){const b=buildsState.builds.find(x=>x.id===editingBuildId);if(b)Object.assign(b,{title,ask,buy,gpu,cpu,ram,ssd,mobo,date,status,note,img});}
+  else{buildsState.builds.push({id:Date.now(),title,ask,buy,gpu,cpu,ram,ssd,mobo,date,status,note,img});}
+  saveBuilds();closeBuildSheet();showToast(editingBuildId?'Build bijgewerkt ✓':'Build toegevoegd ✓');vibrate(15);
+  if(currentPage==='profile')renderProfile();
+  if(currentPage==='build-detail')renderBuildDetail();
+}
+
+/* ═══════════════════ MODAL (cash / confirm) ═══════════════════ */
+let modalCb=null;
+function openConfirm(title,msg,cb,danger=true){
+  $('#modal-title').textContent=title;$('#modal-msg').textContent=msg;$('#modal-input').style.display='none';
+  $('#modal-ok').textContent=danger?'Verwijderen':'Bevestigen';$('#modal-ok').className='btn-ok'+(danger?' danger':'');
+  modalCb=cb;$('#modal-bg').classList.add('on');
+}
+function openInput(title,msg,currentVal,cb){
+  $('#modal-title').textContent=title;$('#modal-msg').textContent=msg;
+  const inp=$('#modal-input');inp.style.display='block';inp.value=currentVal;inp.type='number';
+  $('#modal-ok').textContent='Opslaan';$('#modal-ok').className='btn-ok';
+  modalCb=()=>cb(inp.value);$('#modal-bg').classList.add('on');
+  setTimeout(()=>{inp.focus();inp.select();},100);
+}
+function closeModal(){$('#modal-bg').classList.remove('on');modalCb=null;}
+$('#modal-cancel').addEventListener('click',closeModal);
+$('#modal-ok').addEventListener('click',()=>{const cb=modalCb;closeModal();cb&&cb();});
+$('#modal-input').addEventListener('keydown',e=>{if(e.key==='Enter')$('#modal-ok').click();});
+
+/* ═══════════════════ INLINE DOUBLE-CONFIRM DELETE ═══════════════════ */
+function inlineDelete(btnId,txtId,onConfirm){
+  const btn=$(btnId),txt=$(txtId);
+  if(!btn)return;
+  if(btn.dataset.confirming==='1'){
+    clearTimeout(btn._timer);
+    btn.dataset.confirming='';
+    vibrate([10,50,10]);
+    onConfirm();
+  }else{
+    btn.dataset.confirming='1';
+    btn.classList.add('confirming');
+    txt.textContent='Tap nogmaals om te verwijderen…';
+    btn._timer=setTimeout(()=>{
+      if(btn.dataset.confirming==='1'){
+        btn.dataset.confirming='';btn.classList.remove('confirming');txt.textContent=btnId.includes('build')?'Verwijder build':'Verwijder item';
+      }
+    },2800);
+  }
+}
+
+/* ═══════════════════ ACTIONS ═══════════════════ */
+function editCash(){
+  openInput('Cash-balans','Voer je huidige cash-balans in (€):',state.cash||0,val=>{
+    const n=safeNum(val);if(n>=0){state.cash=n;save();reRenderCurrent();showToast('Cash bijgewerkt ✓');}
+  });
+}
+function toggleFav(){
+  const i=state.items.find(x=>x.id===detailId);if(!i)return;
+  i.fav=!i.fav;save();renderDetail();showToast(i.fav?'Aan favorieten toegevoegd ♥':'Uit favorieten verwijderd');vibrate(8);
+}
+function swipeFav(id){
+  const i=state.items.find(x=>x.id===parseInt(id,10));if(!i)return;
+  i.fav=!i.fav;save();reRenderCurrent();showToast(i.fav?'Favoriet ♥':'Uit favorieten');vibrate(8);
+}
+function swipeSell(id){
+  const i=state.items.find(x=>x.id===parseInt(id,10));if(!i)return;
+  i.status=i.status==='sold'?'hold':'sold';save();reRenderCurrent();
+  showToast(i.status==='sold'?'Gemarkeerd als verkocht ✓':'Teruggezet naar portfolio');vibrate(10);
+}
+function markSold(){
+  const i=state.items.find(x=>x.id===detailId);if(!i)return;
+  i.status=i.status==='sold'?'hold':'sold';save();renderDetail();
+  showToast(i.status==='sold'?'Gemarkeerd als verkocht ✓':'Teruggezet naar portfolio');
+}
+function bdToggleSold(){
+  const b=buildsState.builds.find(x=>x.id===buildDetailId);if(!b)return;
+  b.status=b.status==='sold'?'hold':'sold';saveBuilds();renderBuildDetail();renderProfile();
+  showToast(b.status==='sold'?'Gemarkeerd als verkocht ✓':'Teruggezet naar actief');
+}
+function deleteAsset(id){
+  const item=state.items.find(x=>x.id===id);if(!item)return;
+  state.items=state.items.filter(x=>x.id!==id);save();showToast('Item verwijderd');
+  goto(detailFrom);
+}
+function deleteBuild(id){
+  buildsState.builds=buildsState.builds.filter(x=>x.id!==id);saveBuilds();showToast('Build verwijderd');
+  closeBuildSheet();if(currentPage==='build-detail')goto('profile');else renderProfile();
+}
+function confirmDeleteFromSheet(){
+  const i=state.items.find(x=>x.id===editingId);if(!i)return;
+  openConfirm('Verwijderen?',`"${i.name}" wordt permanent verwijderd.`,()=>{
+    state.items=state.items.filter(x=>x.id!==editingId);save();closeSheet();showToast('Item verwijderd');reRenderCurrent();
+  });
+}
+function confirmDeleteBuildFromSheet(){
+  if(editingBuildId==null){closeBuildSheet();return;}
+  const b=buildsState.builds.find(x=>x.id===editingBuildId);if(!b)return;
+  openConfirm('Verwijderen?',`"${b.title||'Deze build'}" wordt permanent verwijderd.`,()=>deleteBuild(editingBuildId));
+}
+function exportData(){
+  try{
+    const blob=new Blob([JSON.stringify({...state,builds:buildsState.builds},null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=Object.assign(document.createElement('a'),{href:url,download:`hw-tracker-${new Date().toISOString().slice(0,10)}.json`});
+    a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);showToast('Backup gedownload ✓');
+  }catch(e){showToast('Export mislukt',false);}
+}
+$('#f-import').addEventListener('change',()=>{
+  const file=$('#f-import').files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const parsed=JSON.parse(e.target.result);
+      if(!Array.isArray(parsed.items))throw new Error('Ongeldig formaat');
+      const items=parsed.items.map(migrateItem);
+      const builds=Array.isArray(parsed.builds)?parsed.builds:[];
+      openConfirm('Data importeren?',`${items.length} asset(s) + ${builds.length} build(s) gevonden. Huidige data wordt vervangen.`,()=>{
+        state={cash:0,...parsed,items};buildsState={builds};
+        save();saveBuilds();closeSettings();reRenderCurrent();showToast(`${items.length} assets + ${builds.length} builds geladen ✓`);
+      },false);
+    }catch(err){showToast('Ongeldig bestand',false);}
+    $('#f-import').value='';
+  };reader.readAsText(file);
+});
+function confirmClearAll(){
+  openConfirm('Alles wissen?','Alle items, builds en cash worden permanent verwijderd.',()=>{
+    state.items=[];state.cash=0;buildsState.builds=[];save();saveBuilds();reRenderCurrent();showToast('Alles gewist');
+  });
+}
+function openSettings(){$('#set-cash-val').textContent=fmt(state.cash||0);$('#settings-sheet').classList.add('on');$('#settings-bd').classList.add('on');}
+function closeSettings(){$('#settings-sheet').classList.remove('on');$('#settings-bd').classList.remove('on');}
+
+/* ═══════════════════ ROUTER — directional transitions ═══════════════════ */
+let currentPage=null;
+const PAGE_RENDERERS={home:renderHome,hardware:renderHardware,detail:renderDetail,analytics:renderAnalytics,profile:renderProfile,'build-detail':renderBuildDetail};
+
+function goto(id){
+  if(id===currentPage)return;
+  const prevLevel=PAGE_LEVELS[currentPage]??0;
+  const nextLevel=PAGE_LEVELS[id]??0;
+  const direction=nextLevel>prevLevel?'forward':(nextLevel<prevLevel?'back':'same');
+
+  $$('.page').forEach(p=>p.classList.remove('active','enter-right','enter-left'));
+
+  const newPage=$('#'+id);if(!newPage)return;
+  newPage.querySelectorAll('.stagger > *').forEach(el=>{el.style.animation='none';void el.offsetWidth;el.style.animation='';});
+
+  if(direction==='forward')newPage.classList.add('enter-right');
+  else if(direction==='back')newPage.classList.add('enter-left');
+
+  requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>{
+      newPage.classList.remove('enter-right','enter-left');
+      newPage.classList.add('active');
+    });
+  });
+
+  $$('.nav-btn[data-page]').forEach(b=>b.classList.toggle('on',b.dataset.page===id));
+  currentPage=id;
+  newPage.scrollTop=0;
+  const fn=PAGE_RENDERERS[id];if(fn)fn();
+}
+function reRenderCurrent(){const fn=PAGE_RENDERERS[currentPage];if(fn)fn();}
+
+/* ═══════════════════ CONTEXT-AWARE FAB ═══════════════════ */
+$('#nav-fab').addEventListener('click',()=>{
+  vibrate(8);
+  if(currentPage==='profile'||currentPage==='build-detail'){openAddBuild();}
+  else{openAdd();}
+});
+
+/* ═══════════════════ EVENT DELEGATION ═══════════════════ */
+document.addEventListener('click',e=>{
+  const navBtn=e.target.closest('.nav-btn[data-page]');
+  if(navBtn){vibrate(8);goto(navBtn.dataset.page);return;}
+
+  const rangeTab=e.target.closest('.range-tab');
+  if(rangeTab){$$('#range-tabs .range-tab').forEach(t=>t.classList.remove('on'));rangeTab.classList.add('on');const i=state.items.find(x=>x.id===detailId);if(i)drawGraph(i);return;}
+
+  if(e.target.closest('#detail-back-btn')){goto(detailFrom);return;}
+  if(e.target.closest('#bd-back-btn')){goto('profile');return;}
+
+  const actionEl=e.target.closest('[data-action]');if(!actionEl)return;
+  const action=actionEl.dataset.action;
+
+  switch(action){
+    case 'add':                       openAdd(); break;
+    case 'add-build':                 openAddBuild(); break;
+    case 'cash':                      editCash(); break;
+    case 'cash-from-settings':        closeSettings();editCash(); break;
+    case 'settings':                  openSettings(); break;
+    case 'open-profile':              openProfileSheet(); break;
+    case 'close-profile':             closeProfileSheet(); break;
+    case 'pick-profile-img':          $('#f-profile-img').click(); break;
+    case 'save-profile':              saveProfile(); break;
+    case 'close-sheet':               closeSheet(); break;
+    case 'close-build-sheet':         closeBuildSheet(); break;
+    case 'close-settings':            closeSettings(); break;
+    case 'goto-home':                 goto('home'); break;
+    case 'goto-hardware':             goto('hardware'); break;
+    case 'goto-analytics':            goto('analytics'); break;
+    case 'goto-profile':              goto('profile'); break;
+    case 'open-detail':
+      detailId=parseInt(actionEl.dataset.id,10);detailFrom=actionEl.dataset.from||'hardware';goto('detail'); break;
+    case 'open-build-detail':
+      buildDetailId=parseInt(actionEl.dataset.id,10);goto('build-detail'); break;
+    case 'set-cat':                   filterCat=actionEl.dataset.cat;renderHardware(); break;
+    case 'set-sort':                  sortMode=actionEl.dataset.sort;renderHardware(); break;
+    case 'clear-search':              $('#hw-search').value='';searchQuery='';$('#hw-search-clear').classList.remove('on');renderHardware(); break;
+    case 'set-status-filter':         profileFilter=actionEl.dataset.status;renderProfile(); break;
+    case 'pick-cat':                  selCat=actionEl.dataset.cat;renderCatPills();acType(); break;
+    case 'pick-status':               selStatus=actionEl.dataset.status;renderStatusPills(); break;
+    case 'pick-suggest':              $('#f-name').value=actionEl.dataset.val;$('#ac-dd').classList.remove('on');$('#f-buy').focus(); break;
+    case 'pick-image':                $('#f-img').click(); break;
+    case 'remove-image':              e.stopPropagation();pendingImg=null;imgRemoved=true;$('#f-img').value='';renderImgPreview(null); break;
+    case 'pick-build-image':          $('#f-build-img').click(); break;
+    case 'remove-build-image':        e.stopPropagation();buildPendingImg=null;buildImgRemoved=true;$('#f-build-img').value='';renderBuildImgPreview(null); break;
+    case 'save-item':                 saveItem(); break;
+    case 'save-build':                saveBuild(); break;
+    case 'edit-item':{const i=state.items.find(x=>x.id===detailId);if(i)openEdit(i);break;}
+    case 'edit-build':{const b=buildsState.builds.find(x=>x.id===buildDetailId);if(b)openEditBuild(b);break;}
+    case 'toggle-fav':                toggleFav(); break;
+    case 'mark-sold':                 markSold(); break;
+    case 'bd-toggle-sold':            bdToggleSold(); break;
+    case 'swipe-fav':                 swipeFav(actionEl.dataset.id); break;
+    case 'swipe-sell':                swipeSell(actionEl.dataset.id); break;
+    case 'inline-delete-asset':       inlineDelete('#delete-asset-btn','#delete-asset-txt',()=>deleteAsset(detailId)); break;
+    case 'inline-delete-build':       inlineDelete('#delete-build-btn','#delete-build-txt',()=>deleteBuild(buildDetailId)); break;
+    case 'confirm-delete-editing':    confirmDeleteFromSheet(); break;
+    case 'confirm-delete-build-editing': confirmDeleteBuildFromSheet(); break;
+    case 'mp-search':{
+      const i=state.items.find(x=>x.id===detailId);if(i)window.open(`https://www.marktplaats.nl/q/${encodeURIComponent(i.name+' '+i.cat)}/#Language:nl-NL`,'_blank');
+      showToast('Marktplaats opent…');break;
+    }
+    case 'ebay-search':{
+      const i=state.items.find(x=>x.id===detailId);if(i)window.open(`https://www.kleinanzeigen.de/s/${encodeURIComponent(i.name)}`,'_blank');
+      showToast('eBay opent…');break;
+    }
+    case 'share-build':{
+      const b=buildsState.builds.find(x=>x.id===buildDetailId);
+      if(b&&navigator.share){navigator.share({title:b.title,text:`${b.title} — ${fmt(b.ask||0)}`}).catch(()=>{});}
+      else{showToast('Kopieer handmatig',false);}break;
+    }
+    case 'export-data':               closeSettings();exportData(); break;
+    case 'import-data':               $('#f-import').click(); break;
+    case 'confirm-clear':             closeSettings();confirmClearAll(); break;
+  }
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape')return;
+  if($('#modal-bg').classList.contains('on'))closeModal();
+  else if($('#build-sheet').classList.contains('on'))closeBuildSheet();
+  else if($('#sheet').classList.contains('on'))closeSheet();
+  else if($('#profile-sheet').classList.contains('on'))closeProfileSheet();
+  else if($('#settings-sheet').classList.contains('on'))closeSettings();
+});
+
+// Horizontal scroll with mouse wheel on fav-scroll
+$('.app').addEventListener('wheel',e=>{
+  const sc=e.target.closest('.fav-scroll');if(!sc)return;
+  e.preventDefault();sc.scrollBy({left:e.deltaY||e.deltaX,behavior:'auto'});
+},{passive:false});
+
+/* ═══════════════════ INIT ═══════════════════ */
+goto('home');
+</script>
+</body>
+</html>
